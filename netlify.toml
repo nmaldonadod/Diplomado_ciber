@@ -1,0 +1,17 @@
+# ============================================================
+#  Configuración de despliegue en Netlify
+#  Sitio estático (HTML/CSS/JS) — no requiere build.
+# ============================================================
+
+[build]
+  # No hay proceso de compilación: se publica la carpeta tal cual.
+  publish = "."
+  command = ""
+
+# Cabeceras de seguridad básicas
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

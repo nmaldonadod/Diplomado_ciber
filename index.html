@@ -3,412 +3,723 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Diplomado en Ciberseguridad Aplicada | INACAP · Educación Continua</title>
+
+<!-- ============================================================= -->
+<!--  INVITACIÓN DE BODA · Sitio de una sola página                -->
+<!--  Para personalizar, busca los bloques marcados con  ✎ EDITAR  -->
+<!-- ============================================================= -->
+
+<!-- ✎ EDITAR: título de la pestaña del navegador -->
+<title>Isabela &amp; Mateo · Nos casamos</title>
+<meta name="description" content="Isabela & Mateo — 14 de noviembre de 2026. Acompáñanos a celebrar nuestra boda.">
+
+<!-- Redes / vista previa al compartir el enlace -->
+<meta property="og:title" content="Isabela & Mateo · Nos casamos">
+<meta property="og:description" content="14 de noviembre de 2026 · Acompáñanos a celebrar nuestro día.">
+<meta property="og:type" content="website">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+
 <style>
-  :root{
-    --rojo:#e1251b;          /* Rojo institucional INACAP (Pantone 485 aprox.) */
-    --rojo-osc:#b71c13;
-    --rojo-cl:#fce8e7;
-    --tinta:#1d1d1b;         /* Negro corporativo (no #000) */
-    --tinta-2:#3c3c3b;
-    --gris:#6b6b6a;
-    --gris-cl:#f5f6f7;
-    --gris-2:#eceef0;
-    --borde:#e2e5e9;
-    --blanco:#ffffff;
-    --sombra:0 1px 3px rgba(29,29,27,.06),0 6px 18px rgba(29,29,27,.05);
-    --sombra-h:0 8px 30px rgba(29,29,27,.12);
-    --cont:1200px;
-    --font:'Helvetica Neue','Segoe UI',Arial,system-ui,-apple-system,sans-serif;
-  }
-  *{margin:0;padding:0;box-sizing:border-box}
-  html{scroll-behavior:smooth}
-  body{font-family:var(--font);color:var(--tinta);line-height:1.6;background:var(--blanco);-webkit-font-smoothing:antialiased;font-size:16px}
-  a{text-decoration:none;color:inherit}
-  .wrap{max-width:var(--cont);margin:0 auto;padding:0 28px}
-  section{padding:88px 0}
-  .eyebrow{display:inline-block;color:var(--rojo);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:.74rem;margin-bottom:16px}
-  h2.titulo{font-size:2.15rem;line-height:1.14;font-weight:700;letter-spacing:-.02em;margin-bottom:16px}
-  .subt{color:var(--gris);max-width:720px;font-size:1.08rem}
-  .center{text-align:center}
-  .center .subt{margin:0 auto}
-  .lead-block{max-width:760px;margin-bottom:52px}
-  .center.lead-block{margin-left:auto;margin-right:auto}
+/* ======================  SISTEMA DE DISEÑO  ====================== */
+:root{
+  /* Paleta — elegante minimalista, tonos crema y dorado suave */
+  --marfil:      #F7F3EC;   /* fondo principal */
+  --marfil-2:    #F1EBE0;   /* fondo alterno / tarjetas */
+  --crema:       #FBF9F4;
+  --tinta:       #2E2A25;   /* texto principal (casi negro cálido) */
+  --tinta-2:     #6A6157;   /* texto secundario */
+  --oro:         #A98B5D;   /* acento dorado apagado */
+  --oro-cl:      #C7AC80;
+  --linea:       #DCD3C4;   /* hairlines */
+  --blanco:      #FFFFFF;
 
-  /* ===== Botones ===== */
-  .btn{display:inline-flex;align-items:center;gap:9px;padding:14px 26px;border-radius:4px;font-weight:600;
-    font-size:.95rem;cursor:pointer;border:1.5px solid transparent;transition:.18s ease;font-family:inherit;line-height:1}
-  .btn-rojo{background:var(--rojo);color:#fff}
-  .btn-rojo:hover{background:var(--rojo-osc);transform:translateY(-1px)}
-  .btn-oscuro{background:var(--tinta);color:#fff}
-  .btn-oscuro:hover{background:#000}
-  .btn-linea{background:transparent;color:var(--tinta);border-color:#c9ccd1}
-  .btn-linea:hover{border-color:var(--tinta);background:var(--tinta);color:#fff}
-  .btn-linea-bl{background:transparent;color:#fff;border-color:rgba(255,255,255,.55)}
-  .btn-linea-bl:hover{background:#fff;color:var(--tinta);border-color:#fff}
-  .btn .fl{transition:.18s}.btn:hover .fl{transform:translateX(3px)}
+  --serif: "Cormorant Garamond", "Times New Roman", serif;
+  --sans:  "Jost", -apple-system, "Segoe UI", sans-serif;
 
-  /* ===== Logos (placeholders) ===== */
-  .lockup{display:flex;align-items:center;gap:16px}
-  .wm-inacap{font-weight:800;color:var(--rojo);font-size:1.62rem;letter-spacing:-.04em;line-height:1}
-  .wm-inacap::after{content:"";display:inline-block;width:6px;height:6px;background:var(--rojo);border-radius:50%;margin-left:1px;vertical-align:baseline}
-  .wm-eset{font-weight:800;color:var(--tinta);font-size:1.18rem;letter-spacing:.22em;line-height:1}
-  .colab{font-size:.66rem;color:#9a9da2;text-transform:uppercase;letter-spacing:.12em;font-weight:600;white-space:nowrap}
-  .divv{width:1px;height:26px;background:var(--borde)}
+  --ease: cubic-bezier(.22,.61,.36,1);
+}
 
-  /* ===== Topbar ===== */
-  .topbar{background:var(--rojo);color:#fff;font-size:.78rem}
-  .topbar .wrap{display:flex;justify-content:space-between;align-items:center;height:38px}
-  .topbar .l{display:flex;gap:22px;align-items:center;font-weight:500}
-  .topbar .l span{opacity:.92}
-  .topbar .r{display:flex;gap:20px;align-items:center}
-  .topbar a{opacity:.92;font-weight:500}.topbar a:hover{opacity:1;text-decoration:underline}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+body{
+  font-family:var(--sans);
+  font-weight:300;
+  color:var(--tinta);
+  background:var(--marfil);
+  line-height:1.75;
+  letter-spacing:.01em;
+  overflow-x:hidden;
+}
+img{ max-width:100%; display:block; }
+a{ color:inherit; text-decoration:none; }
 
-  /* ===== Header ===== */
-  header{position:sticky;top:0;z-index:60;background:#fff;border-bottom:1px solid var(--borde);box-shadow:0 1px 0 rgba(0,0,0,.01)}
-  .hrow{display:flex;align-items:center;justify-content:space-between;height:82px;gap:24px}
-  nav.main ul{display:flex;list-style:none;gap:30px;align-items:center}
-  nav.main a{font-size:.94rem;font-weight:600;color:var(--tinta-2);padding:8px 0;position:relative;letter-spacing:-.01em}
-  nav.main a:hover{color:var(--rojo)}
-  nav.main a::after{content:"";position:absolute;left:0;bottom:0;height:2.5px;width:0;background:var(--rojo);transition:.2s}
-  nav.main a:hover::after{width:100%}
-  .head-cta{display:flex;align-items:center;gap:14px}
-  .head-cta .btn{padding:11px 18px;font-size:.86rem}
-  .burger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:8px}
-  .burger span{width:26px;height:2px;background:var(--tinta);display:block;border-radius:2px}
+/* ------------------------  Tipografía  ------------------------ */
+h1,h2,h3{ font-family:var(--serif); font-weight:400; line-height:1.1; }
 
-  /* ===== Hero ===== */
-  .hero{background:var(--gris-cl);border-bottom:1px solid var(--borde);position:relative;overflow:hidden}
-  .hero .wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:60px;align-items:center;padding-top:78px;padding-bottom:78px}
-  .crumbs{font-size:.8rem;color:var(--gris);margin-bottom:22px}
-  .crumbs a:hover{color:var(--rojo)}.crumbs .sep{margin:0 8px;color:#c4c7cc}
-  .hero h1{font-size:3.15rem;line-height:1.06;font-weight:800;letter-spacing:-.03em;margin-bottom:20px}
-  .hero .lead{font-size:1.18rem;font-weight:600;color:var(--tinta);margin-bottom:14px}
-  .hero p.desc{color:var(--gris);font-size:1.06rem;margin-bottom:32px;max-width:540px}
-  .hero .acts{display:flex;gap:14px;flex-wrap:wrap}
+/* Etiqueta pequeña con hairlines a los lados */
+.kicker{
+  font-family:var(--sans);
+  font-weight:400;
+  font-size:.72rem;
+  letter-spacing:.4em;
+  text-transform:uppercase;
+  color:var(--oro);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:1.1rem;
+}
+.kicker::before,.kicker::after{
+  content:"";
+  width:34px;
+  height:1px;
+  background:var(--oro-cl);
+  opacity:.7;
+}
+.kicker.left{ justify-content:flex-start; }
+.kicker.left::before{ display:none; }
 
-  /* Imagen institucional (placeholder) */
-  .imgbox{position:relative;border-radius:14px;overflow:hidden;box-shadow:var(--sombra-h);
-    background:linear-gradient(140deg,#2b2b29 0%,#1d1d1b 60%,#111 100%);min-height:420px;
-    display:flex;flex-direction:column;justify-content:flex-end}
-  .imgbox::before{content:"";position:absolute;inset:0;
-    background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
-    background-size:40px 40px;mask-image:radial-gradient(120% 120% at 70% 20%,#000,transparent 75%)}
-  .imgbox .ph-tag{position:absolute;top:18px;left:18px;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;
-    color:rgba(255,255,255,.6);border:1px dashed rgba(255,255,255,.3);padding:6px 12px;border-radius:5px;font-weight:600}
-  .imgbox .glyph{position:absolute;top:50%;left:50%;transform:translate(-50%,-58%);width:96px;height:112px;
-    background:linear-gradient(160deg,var(--rojo),var(--rojo-osc));border-radius:14px 14px 46% 46%/14px 14px 60% 60%;
-    display:flex;align-items:center;justify-content:center;box-shadow:0 14px 40px rgba(0,0,0,.5)}
-  .imgbox .glyph i{width:30px;height:26px;background:#fff;border-radius:5px;position:relative;margin-top:5px;display:block}
-  .imgbox .glyph i::before{content:"";position:absolute;width:18px;height:18px;border:4px solid #fff;border-bottom:none;
-    border-radius:10px 10px 0 0;top:-14px;left:50%;transform:translateX(-50%)}
-  .imgbox .cap{position:relative;padding:22px 24px;background:linear-gradient(0deg,rgba(0,0,0,.75),transparent);color:#fff}
-  .imgbox .cap strong{display:block;font-size:.98rem}
-  .imgbox .cap span{font-size:.82rem;color:rgba(255,255,255,.7)}
+/* Numeración de sección (01 · 02 …) */
+.sec-num{
+  font-family:var(--serif);
+  font-style:italic;
+  font-size:1rem;
+  color:var(--oro);
+  letter-spacing:.15em;
+}
 
-  /* ===== Franja datos ===== */
-  .datos{background:var(--tinta)}
-  .datos .grid{display:grid;grid-template-columns:repeat(4,1fr)}
-  .dato{color:#fff;padding:34px 26px;border-right:1px solid rgba(255,255,255,.1)}
-  .dato:last-child{border-right:none}
-  .dato .ico{color:var(--rojo);font-size:1.15rem;margin-bottom:12px;display:block;font-weight:700}
-  .dato .num{font-size:1.7rem;font-weight:800;line-height:1;margin-bottom:6px;letter-spacing:-.02em}
-  .dato .lbl{font-size:.9rem;color:rgba(255,255,255,.68)}
+/* ------------------------  Layout  ------------------------ */
+section{ padding:5.5rem 1.5rem; }
+.wrap{ max-width:660px; margin:0 auto; }
+.center{ text-align:center; }
 
-  /* ===== Tarjetas ===== */
-  .cards{display:grid;gap:26px}
-  .cards-4{grid-template-columns:repeat(4,1fr)}
-  .cards-3{grid-template-columns:repeat(3,1fr)}
-  .card{background:#fff;border:1px solid var(--borde);border-radius:10px;padding:30px 26px;transition:.2s;box-shadow:var(--sombra)}
-  .card:hover{box-shadow:var(--sombra-h);transform:translateY(-3px);border-color:#d4d8de}
-  .card .ico{width:50px;height:50px;border-radius:10px;background:var(--rojo-cl);color:var(--rojo);
-    display:flex;align-items:center;justify-content:center;font-size:1.35rem;margin-bottom:18px;font-weight:700}
-  .card h3{font-size:1.12rem;margin-bottom:9px;font-weight:700;letter-spacing:-.01em}
-  .card p{color:var(--gris);font-size:.95rem}
-  .valor{background:var(--gris-cl);border-top:1px solid var(--borde);border-bottom:1px solid var(--borde)}
+.divider{
+  width:1px; height:64px;
+  background:linear-gradient(to bottom,transparent,var(--oro-cl),transparent);
+  margin:0 auto;
+}
 
-  /* ===== Módulos ===== */
-  .mod{position:relative;padding-top:34px;overflow:hidden}
-  .mod::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:var(--rojo)}
-  .mod .cab{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-  .mod .np{font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--rojo)}
-  .mod .hrs{background:var(--gris-2);color:var(--tinta);font-size:.76rem;font-weight:700;padding:5px 12px;border-radius:20px}
-  .mod h3{font-size:1.2rem;margin-bottom:12px;min-height:2.4em;line-height:1.25}
+/* ------------------------  Animación reveal  ------------------------ */
+.reveal{ opacity:0; transform:translateY(28px); transition:opacity 1s var(--ease), transform 1s var(--ease); }
+.reveal.visible{ opacity:1; transform:none; }
+.reveal.d1{ transition-delay:.12s; }
+.reveal.d2{ transition-delay:.24s; }
+.reveal.d3{ transition-delay:.36s; }
+@media (prefers-reduced-motion:reduce){
+  .reveal{ opacity:1; transform:none; transition:none; }
+  html{ scroll-behavior:auto; }
+}
 
-  /* ===== Becas ===== */
-  .becas{background:var(--tinta);color:#fff;position:relative}
-  .becas::after{content:"";position:absolute;top:0;left:0;width:100%;height:5px;background:var(--rojo)}
-  .becas .eyebrow{color:#ff7a72}
-  .becas h2{color:#fff}
-  .becas .subt{color:rgba(255,255,255,.72)}
-  .becas-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:44px;align-items:stretch;margin-top:12px}
-  .flujo{display:flex;flex-direction:column;gap:14px}
-  .paso{display:flex;align-items:center;gap:20px;background:#262625;border:1px solid #3a3a38;border-radius:12px;padding:22px 26px;position:relative}
-  .paso .n{flex:0 0 auto;width:46px;height:46px;border-radius:50%;background:var(--rojo);color:#fff;
-    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.2rem}
-  .paso .txt strong{display:block;font-size:1.04rem;margin-bottom:3px}
-  .paso .txt span{color:rgba(255,255,255,.62);font-size:.92rem}
-  .paso .arrow{position:absolute;left:43px;bottom:-15px;color:var(--rojo);font-size:1rem;z-index:2}
-  .paso:last-child .arrow{display:none}
-  .apoyo{background:#fff;color:var(--tinta);border-radius:12px;padding:30px 28px;border-top:5px solid var(--rojo)}
-  .apoyo h4{font-size:1.06rem;margin-bottom:18px}
-  .apoyo ul{list-style:none}
-  .apoyo li{padding:11px 0 11px 30px;position:relative;font-size:.94rem;color:var(--gris);border-bottom:1px solid var(--gris-2)}
-  .apoyo li:last-child{border-bottom:none}
-  .apoyo li::before{content:"";position:absolute;left:0;top:15px;width:14px;height:14px;border-radius:50%;
-    background:var(--rojo-cl);box-shadow:inset 0 0 0 4px var(--rojo)}
+/* ============================================================= */
+/*  NAV — barra mínima que aparece al hacer scroll               */
+/* ============================================================= */
+.nav{
+  position:fixed; top:0; left:0; right:0; z-index:40;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:.9rem 1.4rem;
+  background:rgba(247,243,236,0);
+  transform:translateY(-100%);
+  transition:transform .5s var(--ease), background .5s var(--ease), box-shadow .5s var(--ease);
+}
+.nav.show{ transform:translateY(0); background:rgba(247,243,236,.92); backdrop-filter:blur(8px); box-shadow:0 1px 0 var(--linea); }
+.nav .mono{ font-family:var(--serif); font-size:1.15rem; letter-spacing:.05em; }
+.nav a.cta{
+  font-family:var(--sans); font-size:.7rem; letter-spacing:.22em; text-transform:uppercase;
+  border:1px solid var(--oro); color:var(--oro);
+  padding:.5rem .95rem; border-radius:2px; transition:all .4s var(--ease);
+}
+.nav a.cta:hover{ background:var(--oro); color:var(--crema); }
 
-  /* ===== CTA ===== */
-  .cta{background:var(--gris-cl);text-align:center;border-top:1px solid var(--borde)}
-  .cta .box{background:#fff;border:1px solid var(--borde);border-top:5px solid var(--rojo);border-radius:14px;
-    padding:60px 44px;box-shadow:var(--sombra);max-width:880px;margin:0 auto}
-  .cta h2{margin-bottom:16px}
-  .cta p{color:var(--gris);font-size:1.1rem;margin-bottom:30px;max-width:640px;margin-inline:auto}
+/* ============================================================= */
+/*  1 · PORTADA / HERO                                            */
+/* ============================================================= */
+.hero{
+  min-height:100svh;
+  display:flex; align-items:center; justify-content:center;
+  text-align:center; position:relative;
+  padding:4rem 1.5rem;
+  background:
+    radial-gradient(120% 90% at 50% 0%, var(--crema), var(--marfil) 60%);
+}
+/* Marco hairline interior */
+.hero::before{
+  content:""; position:absolute; inset:18px;
+  border:1px solid var(--linea);
+  pointer-events:none;
+}
+.hero-inner{ position:relative; z-index:2; }
+.hero .mono-lg{
+  font-family:var(--serif); font-style:italic; font-weight:300;
+  font-size:1.5rem; color:var(--oro); margin-bottom:1.4rem;
+  animation:fadeDown 1.4s var(--ease) both;
+}
+.hero .names{
+  font-family:var(--serif); font-weight:300;
+  font-size:clamp(3rem,17vw,6.5rem);
+  line-height:.98; letter-spacing:.01em;
+}
+.hero .names .amp{ display:block; font-style:italic; color:var(--oro); font-size:.55em; margin:.15em 0; }
+.hero .names span.n{ display:block; animation:fadeUp 1.5s var(--ease) both; }
+.hero .names span.n2{ animation-delay:.15s; }
+.hero .tagline{
+  max-width:30ch; margin:2rem auto 0;
+  font-size:.95rem; color:var(--tinta-2); font-weight:300; letter-spacing:.02em;
+  animation:fadeUp 1.6s var(--ease) .3s both;
+}
+.hero .date-pill{
+  margin-top:2.3rem; display:inline-flex; align-items:center; gap:1rem;
+  font-family:var(--sans); font-size:.78rem; letter-spacing:.32em; text-transform:uppercase; color:var(--tinta);
+  animation:fadeUp 1.6s var(--ease) .45s both;
+}
+.hero .date-pill::before,.hero .date-pill::after{ content:""; width:24px; height:1px; background:var(--oro-cl); }
 
-  /* ===== Footer ===== */
-  footer{background:#141412;color:rgba(255,255,255,.66);padding:64px 0 30px}
-  .fgrid{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:48px;margin-bottom:44px}
-  footer h5{color:#fff;font-size:.82rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:16px}
-  footer p,footer a{font-size:.92rem;color:rgba(255,255,255,.62);line-height:1.95}
-  footer a:hover{color:#fff}
-  .fbrand{display:flex;align-items:center;gap:16px;margin-bottom:18px}
-  .fbrand .wm-eset{color:#fff}
-  .fbot{border-top:1px solid #2a2a28;padding-top:24px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;font-size:.82rem;color:rgba(255,255,255,.5)}
-  .maqueta{background:#232320;border:1px dashed #4a4a46;padding:7px 16px;border-radius:6px;color:rgba(255,255,255,.72);font-weight:600}
+.scroll-cue{
+  position:absolute; bottom:34px; left:50%; transform:translateX(-50%);
+  z-index:3; font-family:var(--sans); font-size:.62rem; letter-spacing:.3em; text-transform:uppercase; color:var(--tinta-2);
+  display:flex; flex-direction:column; align-items:center; gap:.6rem;
+  animation:fadeUp 2s var(--ease) 1s both;
+}
+.scroll-cue .line{ width:1px; height:40px; background:var(--oro-cl); animation:pulseLine 2.4s ease-in-out infinite; transform-origin:top; }
 
-  /* ===== Responsive ===== */
-  @media(max-width:960px){
-    .hero .wrap{grid-template-columns:1fr;gap:40px}
-    .hero h1{font-size:2.5rem}
-    .imgbox{min-height:320px}
-    .datos .grid{grid-template-columns:repeat(2,1fr)}
-    .dato:nth-child(2){border-right:none}
-    .dato:nth-child(-n+2){border-bottom:1px solid rgba(255,255,255,.1)}
-    .cards-4{grid-template-columns:repeat(2,1fr)}
-    .cards-3{grid-template-columns:1fr}
-    .becas-grid{grid-template-columns:1fr;gap:30px}
-    .fgrid{grid-template-columns:1fr 1fr}
-  }
-  @media(max-width:720px){
-    nav.main,.head-cta .btn,.topbar .l span:not(:first-child){display:none}
-    .burger{display:flex}
-    nav.main.open{display:block;position:absolute;top:82px;left:0;right:0;background:#fff;border-bottom:1px solid var(--borde);padding:10px 0;box-shadow:var(--sombra-h)}
-    nav.main.open ul{flex-direction:column;gap:0;align-items:stretch}
-    nav.main.open li{padding:0 28px}
-    nav.main.open a{display:block;padding:14px 0;border-bottom:1px solid var(--gris-2)}
-    section{padding:60px 0}
-    h2.titulo{font-size:1.7rem}
-    .hero h1{font-size:2.05rem}
-    .datos .grid{grid-template-columns:1fr}
-    .dato{border-right:none;border-bottom:1px solid rgba(255,255,255,.1)}
-    .cards-4{grid-template-columns:1fr}
-    .fgrid{grid-template-columns:1fr}
-    .fbot{flex-direction:column;text-align:center}
-    .topbar .r a:not(:last-child){display:none}
-  }
+@keyframes fadeUp{ from{opacity:0; transform:translateY(26px);} to{opacity:1; transform:none;} }
+@keyframes fadeDown{ from{opacity:0; transform:translateY(-16px);} to{opacity:1; transform:none;} }
+@keyframes pulseLine{ 0%,100%{ transform:scaleY(.4); opacity:.4;} 50%{ transform:scaleY(1); opacity:1;} }
+
+/* ============================================================= */
+/*  2 · CUENTA REGRESIVA                                          */
+/* ============================================================= */
+.countdown{ background:var(--marfil-2); }
+.count-grid{
+  display:flex; justify-content:center; gap:clamp(.6rem,4vw,2.4rem);
+  margin-top:2.6rem;
+}
+.count-cell{ text-align:center; min-width:60px; }
+.count-cell .num{
+  font-family:var(--serif); font-weight:300;
+  font-size:clamp(2.6rem,13vw,4.2rem); line-height:1; color:var(--tinta);
+  font-variant-numeric:tabular-nums;
+}
+.count-cell .lab{
+  margin-top:.6rem; font-size:.62rem; letter-spacing:.28em; text-transform:uppercase; color:var(--oro);
+}
+.count-sep{ font-family:var(--serif); font-size:2.4rem; color:var(--linea); align-self:flex-start; margin-top:.2rem; }
+.count-msg{ margin-top:2.4rem; font-family:var(--serif); font-style:italic; font-size:1.15rem; color:var(--tinta-2); }
+
+/* ============================================================= */
+/*  3 · NUESTRA HISTORIA                                          */
+/* ============================================================= */
+.story .lead{
+  font-family:var(--serif); font-size:clamp(1.5rem,6vw,2rem); line-height:1.4; color:var(--tinta);
+  margin:1.6rem 0 1.8rem;
+}
+.story p{ color:var(--tinta-2); margin-bottom:1.1rem; }
+.story .sign{ font-family:var(--serif); font-style:italic; font-size:1.3rem; color:var(--oro); margin-top:1.6rem; }
+
+/* ============================================================= */
+/*  4 · DETALLES DEL EVENTO                                       */
+/* ============================================================= */
+.details{ background:var(--marfil-2); }
+.detail-cards{ display:grid; gap:1.3rem; margin-top:2.6rem; }
+@media(min-width:620px){ .detail-cards{ grid-template-columns:1fr 1fr; } }
+.card{
+  background:var(--crema); border:1px solid var(--linea);
+  padding:2.4rem 1.8rem; text-align:center;
+  transition:transform .5s var(--ease), box-shadow .5s var(--ease);
+}
+.card:hover{ transform:translateY(-4px); box-shadow:0 18px 40px rgba(46,42,37,.08); }
+.card .ico{ font-size:1.6rem; color:var(--oro); margin-bottom:.8rem; }
+.card h3{ font-size:1.9rem; margin-bottom:.3rem; }
+.card .when{ font-size:.72rem; letter-spacing:.24em; text-transform:uppercase; color:var(--oro); margin-bottom:1.1rem; }
+.card p{ color:var(--tinta-2); font-size:.95rem; }
+.card .place{ font-weight:400; color:var(--tinta); margin-top:.5rem; }
+
+/* ============================================================= */
+/*  5 · UBICACIÓN                                                 */
+/* ============================================================= */
+.map-frame{
+  margin-top:2.6rem; border:1px solid var(--linea); padding:8px; background:var(--crema);
+}
+.map-frame .ratio{ position:relative; width:100%; padding-bottom:66%; overflow:hidden; }
+.map-frame iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; filter:grayscale(.25) contrast(.95); }
+.btn{
+  display:inline-flex; align-items:center; gap:.7rem;
+  font-family:var(--sans); font-size:.74rem; letter-spacing:.24em; text-transform:uppercase;
+  background:var(--tinta); color:var(--crema);
+  padding:1rem 2rem; border:1px solid var(--tinta); border-radius:2px;
+  transition:all .45s var(--ease); margin-top:2rem;
+}
+.btn:hover{ background:transparent; color:var(--tinta); }
+.btn.gold{ background:var(--oro); border-color:var(--oro); }
+.btn.gold:hover{ background:transparent; color:var(--oro); }
+
+/* ============================================================= */
+/*  6 · GALERÍA + LIGHTBOX                                        */
+/* ============================================================= */
+.gallery-grid{
+  display:grid; grid-template-columns:repeat(2,1fr); gap:.7rem; margin-top:2.6rem;
+}
+@media(min-width:620px){ .gallery-grid{ grid-template-columns:repeat(3,1fr); gap:1rem; } }
+.g-item{
+  position:relative; overflow:hidden; cursor:pointer; aspect-ratio:3/4;
+  background:linear-gradient(135deg,var(--marfil-2),var(--linea));
+  border:1px solid var(--linea);
+}
+.g-item:nth-child(3n+1){ aspect-ratio:3/4; }
+.g-item img{ width:100%; height:100%; object-fit:cover; opacity:0; transition:transform .8s var(--ease), opacity .6s; }
+.g-item.loaded img{ opacity:1; }
+.g-item:hover img{ transform:scale(1.06); }
+/* Placeholder elegante si aún no hay foto */
+.g-item .ph{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-family:var(--serif); font-style:italic; color:var(--tinta-2); font-size:.95rem; text-align:center; padding:1rem;
+}
+.g-item.loaded .ph{ display:none; }
+.g-item::after{
+  content:""; position:absolute; inset:0; background:rgba(46,42,37,0); transition:background .5s var(--ease);
+}
+.g-item:hover::after{ background:rgba(46,42,37,.12); }
+
+/* Lightbox */
+.lightbox{
+  position:fixed; inset:0; z-index:60; background:rgba(30,27,23,.94);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; visibility:hidden; transition:opacity .4s var(--ease), visibility .4s;
+  padding:2rem;
+}
+.lightbox.open{ opacity:1; visibility:visible; }
+.lightbox img{ max-width:92vw; max-height:82vh; object-fit:contain; box-shadow:0 30px 80px rgba(0,0,0,.5); }
+.lb-btn{
+  position:absolute; top:50%; transform:translateY(-50%);
+  background:none; border:1px solid rgba(255,255,255,.35); color:#fff;
+  width:48px; height:48px; border-radius:50%; font-size:1.3rem; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; transition:all .3s;
+}
+.lb-btn:hover{ background:rgba(255,255,255,.12); border-color:#fff; }
+.lb-prev{ left:3vw; } .lb-next{ right:3vw; }
+.lb-close{ top:4vh; right:4vw; transform:none; }
+.lb-count{ position:absolute; bottom:5vh; left:50%; transform:translateX(-50%); color:rgba(255,255,255,.7); font-size:.8rem; letter-spacing:.2em; }
+@media(max-width:560px){ .lb-prev{ left:2vw; } .lb-next{ right:2vw; } .lb-btn{ width:42px; height:42px; } }
+
+/* ============================================================= */
+/*  7 · DRESS CODE / REGALOS                                      */
+/* ============================================================= */
+.info{ background:var(--marfil-2); }
+.info-grid{ display:grid; gap:2.4rem; margin-top:2.6rem; }
+@media(min-width:620px){ .info-grid{ grid-template-columns:1fr 1fr; gap:3rem; } }
+.info-block{ text-align:center; }
+.info-block .ico{ font-size:1.7rem; color:var(--oro); margin-bottom:.7rem; }
+.info-block h3{ font-size:1.7rem; margin-bottom:.7rem; }
+.info-block p{ color:var(--tinta-2); font-size:.95rem; }
+.info-block .swatches{ display:flex; gap:.5rem; justify-content:center; margin-top:1.1rem; }
+.info-block .swatches span{ width:26px; height:26px; border-radius:50%; border:1px solid var(--linea); }
+
+/* ============================================================= */
+/*  8 · RSVP                                                      */
+/* ============================================================= */
+.rsvp .wrap{ max-width:560px; }
+.form{
+  margin-top:2.6rem; text-align:left;
+  background:var(--crema); border:1px solid var(--linea); padding:2.4rem 1.8rem;
+}
+.field{ margin-bottom:1.7rem; }
+.field label{
+  display:block; font-size:.66rem; letter-spacing:.24em; text-transform:uppercase; color:var(--oro); margin-bottom:.6rem;
+}
+.field input,.field select,.field textarea{
+  width:100%; background:transparent; border:none; border-bottom:1px solid var(--linea);
+  font-family:var(--sans); font-weight:300; font-size:1rem; color:var(--tinta);
+  padding:.55rem 0; transition:border-color .4s var(--ease);
+}
+.field input:focus,.field select,.field textarea:focus{ outline:none; border-color:var(--oro); }
+.field textarea{ resize:vertical; min-height:70px; }
+.field select{ appearance:none; cursor:pointer; }
+.radio-row{ display:flex; gap:1.6rem; margin-top:.3rem; }
+.radio-row label{ display:flex; align-items:center; gap:.5rem; letter-spacing:0; text-transform:none; font-size:.95rem; color:var(--tinta); cursor:pointer; }
+.radio-row input{ width:auto; accent-color:var(--oro); }
+.form .btn{ width:100%; justify-content:center; margin-top:.6rem; cursor:pointer; }
+.hp{ position:absolute; left:-9999px; }
+.form-note{ font-size:.78rem; color:var(--tinta-2); text-align:center; margin-top:1.2rem; }
+.form-success{
+  display:none; text-align:center; padding:1rem 0;
+}
+.form-success.show{ display:block; }
+.form-success .ico{ font-size:2rem; color:var(--oro); }
+.form-success h3{ font-size:1.9rem; margin:.6rem 0 .4rem; }
+.form-success p{ color:var(--tinta-2); }
+
+/* ============================================================= */
+/*  FOOTER                                                        */
+/* ============================================================= */
+footer{
+  text-align:center; padding:4.5rem 1.5rem 3.5rem;
+  background:var(--tinta); color:var(--crema);
+}
+footer .mono{ font-family:var(--serif); font-style:italic; font-size:2.4rem; color:var(--oro-cl); }
+footer .fdate{ font-size:.72rem; letter-spacing:.32em; text-transform:uppercase; margin-top:1rem; color:rgba(251,249,244,.75); }
+footer .fmsg{ font-family:var(--serif); font-size:1.15rem; margin-top:1.6rem; color:rgba(251,249,244,.9); }
+footer .heart{ color:var(--oro-cl); }
 </style>
 </head>
 <body>
 
-<!-- ===== Topbar ===== -->
-<div class="topbar">
-  <div class="wrap">
-    <div class="l"><span><strong>Educación Continua INACAP</strong></span><span>Diplomados y programas de especialización</span></div>
-    <div class="r"><a href="#contacto">Contacto</a><a href="#becas">Becas STEM</a></div>
-  </div>
-</div>
+<!-- ===============  NAV  =============== -->
+<nav class="nav" id="nav">
+  <span class="mono">I &amp; M</span>
+  <a href="#rsvp" class="cta">Confirmar</a>
+</nav>
 
-<!-- ===== Header ===== -->
-<header>
-  <div class="wrap hrow">
-    <div class="lockup">
-      <span class="wm-inacap" aria-label="INACAP">inacap</span>
-      <span class="divv"></span>
-      <span class="colab">en colaboración con</span>
-      <span class="wm-eset" aria-label="ESET">ESET</span>
-    </div>
-    <nav class="main" id="nav">
-      <ul>
-        <li><a href="#programa">Programa</a></li>
-        <li><a href="#modulos">Módulos</a></li>
-        <li><a href="#becas">Becas STEM</a></li>
-        <li><a href="#dirigido">Dirigido a</a></li>
-        <li><a href="#contacto">Contacto</a></li>
-      </ul>
-    </nav>
-    <div class="head-cta">
-      <a href="#becas" class="btn btn-rojo">Postula a Becas STEM</a>
-      <button class="burger" id="burger" aria-label="Abrir menú"><span></span><span></span><span></span></button>
-    </div>
+<!-- ===============  1 · PORTADA  =============== -->
+<header class="hero" id="inicio">
+  <div class="hero-inner">
+    <!-- ✎ EDITAR: monograma / frase superior -->
+    <div class="mono-lg">Nos casamos</div>
+
+    <!-- ✎ EDITAR: nombres de la pareja -->
+    <h1 class="names">
+      <span class="n n1">Isabela</span>
+      <span class="amp">&amp;</span>
+      <span class="n n2">Mateo</span>
+    </h1>
+
+    <!-- ✎ EDITAR: frase corta -->
+    <p class="tagline">Con la bendición de Dios y de nuestras familias, queremos compartir contigo el comienzo de nuestra vida juntos.</p>
+
+    <!-- ✎ EDITAR: fecha -->
+    <div class="date-pill">14 · 11 · 2026</div>
   </div>
+  <div class="scroll-cue"><span>Desliza</span><span class="line"></span></div>
 </header>
 
-<!-- ===== Hero ===== -->
-<section class="hero" id="programa">
-  <div class="wrap">
-    <div>
-      <div class="crumbs"><a href="#">Inicio</a><span class="sep">›</span><a href="#">Educación Continua</a><span class="sep">›</span>Diplomado en Ciberseguridad Aplicada</div>
-      <div class="eyebrow">Diplomado · e-learning sincrónico</div>
-      <h1>Diplomado en Ciberseguridad Aplicada</h1>
-      <p class="lead">Programa desarrollado en colaboración entre INACAP y ESET.</p>
-      <p class="desc">Formación aplicada para gestionar la seguridad de la información, analizar malware y ciberamenazas, y responder a incidentes con enfoque técnico y organizacional.</p>
-      <div class="acts">
-        <a href="#valor" class="btn btn-rojo">Conocer el programa <span class="fl">→</span></a>
-        <a href="#becas" class="btn btn-linea">Ver Becas STEM</a>
-      </div>
+<!-- ===============  2 · CUENTA REGRESIVA  =============== -->
+<section class="countdown center" id="cuenta">
+  <div class="wrap reveal">
+    <p class="kicker"><span class="sec-num">01</span> Cuenta regresiva</p>
+    <div class="count-grid" id="countdown"
+         data-target="2026-11-14T17:00:00">
+      <!-- ✎ EDITAR fecha y hora exactas arriba en  data-target  (formato AAAA-MM-DDTHH:MM:SS, hora local) -->
+      <div class="count-cell"><div class="num" id="cd-d">00</div><div class="lab">Días</div></div>
+      <span class="count-sep">·</span>
+      <div class="count-cell"><div class="num" id="cd-h">00</div><div class="lab">Horas</div></div>
+      <span class="count-sep">·</span>
+      <div class="count-cell"><div class="num" id="cd-m">00</div><div class="lab">Min</div></div>
+      <span class="count-sep">·</span>
+      <div class="count-cell"><div class="num" id="cd-s">00</div><div class="lab">Seg</div></div>
     </div>
-    <div class="imgbox" aria-hidden="true">
-      <span class="ph-tag">Espacio · imagen institucional</span>
-      <div class="glyph"><i></i></div>
-      <div class="cap"><strong>Ciberseguridad aplicada</strong><span>Gestión · malware y amenazas · análisis forense</span></div>
+    <p class="count-msg" id="cd-msg">para el gran día</p>
+  </div>
+</section>
+
+<!-- ===============  3 · NUESTRA HISTORIA  =============== -->
+<section class="story center" id="historia">
+  <div class="wrap">
+    <p class="kicker reveal"><span class="sec-num">02</span> Nuestra historia</p>
+    <!-- ✎ EDITAR: mensaje de bienvenida / historia -->
+    <p class="lead reveal d1">Hay caminos que se cruzan por casualidad y otros que estaban escritos. El nuestro fue de los segundos.</p>
+    <p class="reveal d1">Nos conocimos una tarde cualquiera que terminó siendo inolvidable. Desde entonces hemos reído, viajado, discutido sobre a quién le toca lavar los platos y, sobre todo, hemos aprendido que el amor también es elegir cada día a la misma persona.</p>
+    <p class="reveal d2">Hoy queremos dar el siguiente paso rodeados de las personas que más queremos. Gracias por ser parte de nuestra historia. Nos hará inmensamente felices tenerte con nosotros.</p>
+    <p class="sign reveal d2">Con amor, Isabela &amp; Mateo</p>
+  </div>
+  <div class="divider reveal d3" style="margin-top:3rem;"></div>
+</section>
+
+<!-- ===============  4 · DETALLES DEL EVENTO  =============== -->
+<section class="details center" id="detalles">
+  <div class="wrap">
+    <p class="kicker reveal"><span class="sec-num">03</span> Detalles del evento</p>
+    <div class="detail-cards">
+      <!-- ✎ EDITAR: ceremonia -->
+      <div class="card reveal d1">
+        <div class="ico">⛪</div>
+        <h3>Ceremonia</h3>
+        <div class="when">Sábado · 17:00 h</div>
+        <p>Te esperamos para el momento en que diremos «sí, acepto».</p>
+        <p class="place">Parroquia San Miguel<br>Calle de la Luz 45</p>
+      </div>
+      <!-- ✎ EDITAR: celebración -->
+      <div class="card reveal d2">
+        <div class="ico">🥂</div>
+        <h3>Celebración</h3>
+        <div class="when">Sábado · 19:00 h</div>
+        <p>Cóctel, cena, música y baile hasta que el cuerpo aguante.</p>
+        <p class="place">Hacienda Los Olivos<br>Camino del Viñedo 12</p>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- ===== Franja datos ===== -->
-<div class="datos">
-  <div class="wrap"><div class="grid">
-    <div class="dato"><span class="ico">◷ Duración</span><div class="num">156 horas</div><div class="lbl">Cronológicas</div></div>
-    <div class="dato"><span class="ico">▶ Modalidad</span><div class="num">E-learning</div><div class="lbl">Sincrónico</div></div>
-    <div class="dato"><span class="ico">▤ Estructura</span><div class="num">3 módulos</div><div class="lbl">Aplicados</div></div>
-    <div class="dato"><span class="ico">▦ Inicio</span><div class="num">Nov. 2026</div><div class="lbl">Proyectado</div></div>
-  </div></div>
+<!-- ===============  5 · UBICACIÓN  =============== -->
+<section class="location center" id="ubicacion">
+  <div class="wrap">
+    <p class="kicker reveal"><span class="sec-num">04</span> Cómo llegar</p>
+    <h2 class="reveal d1" style="font-size:clamp(1.8rem,7vw,2.6rem); margin-top:1rem;">Hacienda Los Olivos</h2>
+    <p class="reveal d1" style="color:var(--tinta-2); margin-top:.6rem;">Camino del Viñedo 12 · Hay estacionamiento disponible en el lugar.</p>
+
+    <!-- ✎ EDITAR: reemplaza el src del iframe por el embed de TU lugar (ver README-boda.md, paso «Mapa») -->
+    <div class="map-frame reveal d2">
+      <div class="ratio">
+        <iframe
+          src="https://www.google.com/maps?q=Vi%C3%B1a%20del%20Mar&output=embed"
+          loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+          title="Ubicación de la celebración"></iframe>
+      </div>
+    </div>
+
+    <!-- ✎ EDITAR: pon el enlace de Google Maps de tu lugar en href -->
+    <a class="btn gold reveal d2"
+       href="https://www.google.com/maps/dir/?api=1&destination=Hacienda+Los+Olivos"
+       target="_blank" rel="noopener">
+       Cómo llegar →
+    </a>
+  </div>
+</section>
+
+<!-- ===============  6 · GALERÍA  =============== -->
+<section class="gallery center" id="galeria">
+  <div class="wrap" style="max-width:900px;">
+    <p class="kicker reveal"><span class="sec-num">05</span> Nosotros</p>
+    <h2 class="reveal d1" style="font-size:clamp(1.8rem,7vw,2.6rem); margin-top:1rem;">Algunos momentos</h2>
+    <!-- ✎ EDITAR: coloca tus fotos en la carpeta /images con los nombres 1.jpg, 2.jpg … (ver README-boda.md) -->
+    <div class="gallery-grid reveal d2" id="gallery">
+      <!-- Se generan con JS a partir del array de abajo -->
+    </div>
+  </div>
+</section>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Foto ampliada">
+  <button class="lb-btn lb-close" id="lbClose" aria-label="Cerrar">✕</button>
+  <button class="lb-btn lb-prev" id="lbPrev" aria-label="Anterior">‹</button>
+  <img id="lbImg" src="" alt="Foto de la pareja">
+  <button class="lb-btn lb-next" id="lbNext" aria-label="Siguiente">›</button>
+  <div class="lb-count" id="lbCount"></div>
 </div>
 
-<!-- ===== Valor ===== -->
-<section class="valor" id="valor">
+<!-- ===============  7 · DRESS CODE / REGALOS  =============== -->
+<section class="info center" id="info">
   <div class="wrap">
-    <div class="center lead-block">
-      <div class="eyebrow">El programa</div>
-      <h2 class="titulo">Una mirada integral de la ciberseguridad aplicada</h2>
-      <p class="subt">El diplomado no se limita a una sola técnica: integra gestión, normativa, amenazas, malware, análisis forense digital y respuesta a incidentes.</p>
-    </div>
-    <div class="cards cards-4">
-      <div class="card"><div class="ico">◎</div><h3>Enfoque aplicado</h3><p>Contenidos orientados a la práctica profesional, con casos y actividades vinculadas al trabajo real.</p></div>
-      <div class="card"><div class="ico">▷</div><h3>Laboratorios virtuales y simulaciones</h3><p>Espacios prácticos para experimentar detección, análisis y respuesta en entornos controlados.</p></div>
-      <div class="card"><div class="ico">§</div><h3>Normativa y estándares</h3><p>Revisión del marco normativo y buenas prácticas que ordenan la gestión de la seguridad.</p></div>
-      <div class="card"><div class="ico">⌂</div><h3>Colaboración con ESET</h3><p>Programa desarrollado junto a ESET, aportando una mirada especializada del sector.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== Módulos ===== -->
-<section id="modulos">
-  <div class="wrap">
-    <div class="center lead-block">
-      <div class="eyebrow">Plan de estudios</div>
-      <h2 class="titulo">Módulos del programa</h2>
-      <p class="subt">Tres módulos aplicados que recorren la gestión, el análisis de amenazas y la respuesta a incidentes.</p>
-    </div>
-    <div class="cards cards-3">
-      <div class="card mod">
-        <div class="cab"><span class="np">Módulo 1</span><span class="hrs">54 horas</span></div>
-        <h3>Gestión de la Seguridad de la Información</h3>
-        <p>Fundamentos de ciberseguridad, marco normativo chileno, riesgos, controles, continuidad operacional y buenas prácticas.</p>
-      </div>
-      <div class="card mod">
-        <div class="cab"><span class="np">Módulo 2</span><span class="hrs">54 horas</span></div>
-        <h3>Análisis de Malware y Ciberamenazas</h3>
-        <p>Comprensión, detección y mitigación de malware; análisis de ciberamenazas, indicadores de compromiso e informes técnicos.</p>
-      </div>
-      <div class="card mod">
-        <div class="cab"><span class="np">Módulo 3</span><span class="hrs">48 horas</span></div>
-        <h3>Análisis Forense Digital y Respuesta a Incidentes</h3>
-        <p>Cadena de custodia, evidencia digital, artefactos, logs, metodologías de respuesta y documentación de incidentes.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== Becas STEM ===== -->
-<section class="becas" id="becas">
-  <div class="wrap">
-    <div class="lead-block">
-      <div class="eyebrow">Iniciativa vinculada al diplomado</div>
-      <h2 class="titulo">Becas STEM para Mujeres en Ciberseguridad</h2>
-      <p class="subt">La landing del diplomado funciona como espacio principal del programa y contiene un bloque destacado para dirigir a la convocatoria de becas.</p>
-    </div>
-    <div class="becas-grid">
-      <div class="flujo">
-        <div class="paso"><div class="n">1</div><div class="txt"><strong>Landing del diplomado</strong><span>Presenta el programa y da visibilidad a la convocatoria de becas.</span></div><span class="arrow">▼</span></div>
-        <div class="paso"><div class="n">2</div><div class="txt"><strong>Página ESET</strong><span>Espacio de la convocatoria de Becas STEM Mujeres en Ciberseguridad.</span></div><span class="arrow">▼</span></div>
-        <div class="paso"><div class="n">3</div><div class="txt"><strong>Formulario INACAP</strong><span>Registro y postulación formal para el proceso.</span></div></div>
-      </div>
-      <div class="apoyo">
-        <h4>Objetivo del flujo</h4>
-        <ul>
-          <li>Mantener el diplomado como eje central de la campaña.</li>
-          <li>Dar visibilidad a ambas instituciones.</li>
-          <li>Ordenar la trazabilidad de las postulaciones.</li>
-          <li>Separar información del programa y convocatoria de becas.</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== Dirigido a ===== -->
-<section id="dirigido">
-  <div class="wrap">
-    <div class="center lead-block">
-      <div class="eyebrow">Perfil de ingreso</div>
-      <h2 class="titulo">Dirigido a</h2>
-      <p class="subt">Un programa pensado para distintos perfiles interesados en fortalecer sus capacidades en ciberseguridad.</p>
-    </div>
-    <div class="cards cards-4">
-      <div class="card"><div class="ico">◐</div><h3>Profesionales y técnicos TI</h3><p>Personas del área de tecnología que buscan sumar competencias en ciberseguridad.</p></div>
-      <div class="card"><div class="ico">▣</div><h3>Organizaciones públicas y privadas</h3><p>Equipos que necesitan fortalecer la protección de su información.</p></div>
-      <div class="card"><div class="ico">⛨</div><h3>Perfiles de seguridad</h3><p>Quienes trabajan o quieren especializarse en roles de seguridad digital.</p></div>
-      <div class="card"><div class="ico">✦</div><h3>Mujeres interesadas en Becas STEM</h3><p>Participantes que buscan sumarse a la iniciativa de Becas STEM del programa.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== CTA ===== -->
-<section class="cta">
-  <div class="wrap">
-    <div class="box">
-      <div class="eyebrow">Convocatoria</div>
-      <h2 class="titulo">Postula al Diplomado en Ciberseguridad Aplicada</h2>
-      <p>Conoce los requisitos, revisa las condiciones de la convocatoria y participa en la iniciativa de Becas STEM vinculada al lanzamiento del programa.</p>
-      <a href="#becas" class="btn btn-rojo">Ir a la convocatoria <span class="fl">→</span></a>
-    </div>
-  </div>
-</section>
-
-<!-- ===== Footer ===== -->
-<footer id="contacto">
-  <div class="wrap">
-    <div class="fgrid">
-      <div>
-        <div class="fbrand">
-          <span class="wm-inacap" style="color:#ff5a4f">inacap</span>
-          <span class="divv" style="background:#3a3a38"></span>
-          <span class="colab">en colaboración con</span>
-          <span class="wm-eset">ESET</span>
+    <p class="kicker reveal"><span class="sec-num">06</span> Buena información</p>
+    <div class="info-grid">
+      <!-- ✎ EDITAR: dress code -->
+      <div class="info-block reveal d1">
+        <div class="ico">👗</div>
+        <h3>Código de vestimenta</h3>
+        <p>Formal / Etiqueta. Te pedimos evitar el blanco y el marfil, reservados para la novia. Los tonos tierra son siempre bienvenidos.</p>
+        <div class="swatches" aria-hidden="true">
+          <span style="background:#A98B5D;"></span>
+          <span style="background:#C7AC80;"></span>
+          <span style="background:#8C7B63;"></span>
+          <span style="background:#5E5140;"></span>
         </div>
-        <p>Diplomado en Ciberseguridad Aplicada, desarrollado en colaboración entre INACAP y ESET. Programa de Educación Continua.</p>
       </div>
-      <div>
-        <h5>Contacto referencial</h5>
-        <p>Educación Continua INACAP<br>educacioncontinua@inacap.cl<br>+56 2 0000 0000<br><span style="color:rgba(255,255,255,.4)">Datos referenciales de maqueta.</span></p>
+      <!-- ✎ EDITAR: regalos -->
+      <div class="info-block reveal d2">
+        <div class="ico">🎁</div>
+        <h3>Mesa de regalos</h3>
+        <p>Tu presencia es nuestro mejor regalo. Si además deseas obsequiarnos algo, hemos preparado una pequeña lista y, si lo prefieres, habrá un cofre para sobres el día del evento.</p>
+        <a class="btn reveal" href="#" target="_blank" rel="noopener" style="margin-top:1.4rem; font-size:.68rem; padding:.8rem 1.6rem;">Ver mesa de regalos</a>
       </div>
-      <div>
-        <h5>El programa</h5>
-        <p><a href="#programa">Programa</a><br><a href="#modulos">Módulos</a><br><a href="#becas">Becas STEM</a><br><a href="#dirigido">Dirigido a</a></p>
-      </div>
-    </div>
-    <div class="fbot">
-      <span>© 2026 INACAP · Colaboración INACAP – ESET. Todos los derechos reservados.</span>
-      <span class="maqueta">Maqueta referencial para revisión interna</span>
     </div>
   </div>
+</section>
+
+<!-- ===============  8 · RSVP  =============== -->
+<section class="rsvp center" id="rsvp">
+  <div class="wrap">
+    <p class="kicker reveal"><span class="sec-num">07</span> Confirma tu asistencia</p>
+    <h2 class="reveal d1" style="font-size:clamp(1.8rem,7vw,2.6rem); margin-top:1rem;">¿Nos acompañas?</h2>
+    <p class="reveal d1" style="color:var(--tinta-2); margin-top:.6rem;">Por favor confírmanos antes del <strong>14 de octubre de 2026</strong>.</p>
+
+    <!-- ============ FORMULARIO NETLIFY ============ -->
+    <!-- data-netlify + name="rsvp" => Netlify guarda cada respuesta en su panel (Forms). -->
+    <form class="form reveal d2"
+          name="rsvp"
+          method="POST"
+          data-netlify="true"
+          data-netlify-honeypot="bot-field"
+          id="rsvpForm">
+      <!-- Necesario para el envío por JS -->
+      <input type="hidden" name="form-name" value="rsvp">
+      <!-- Trampa anti-spam (invisible para humanos) -->
+      <p class="hp"><label>No llenar: <input name="bot-field"></label></p>
+
+      <div class="field">
+        <label for="nombre">Nombre y apellido</label>
+        <input type="text" id="nombre" name="nombre" required placeholder="Tu nombre completo">
+      </div>
+
+      <div class="field">
+        <label for="correo">Correo electrónico</label>
+        <input type="email" id="correo" name="correo" required placeholder="tucorreo@ejemplo.com">
+      </div>
+
+      <div class="field">
+        <label>¿Asistirás?</label>
+        <div class="radio-row">
+          <label><input type="radio" name="asistencia" value="Sí, ahí estaré" checked> Sí, ahí estaré</label>
+          <label><input type="radio" name="asistencia" value="No podré asistir"> No podré</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="acompanantes">Número de acompañantes</label>
+        <select id="acompanantes" name="acompanantes">
+          <option value="0">Solo yo</option>
+          <option value="1">1 acompañante</option>
+          <option value="2">2 acompañantes</option>
+          <option value="3">3 acompañantes</option>
+          <option value="4">4 o más</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="mensaje">Mensaje para los novios <span style="text-transform:none; letter-spacing:0; color:var(--tinta-2);">(opcional)</span></label>
+        <textarea id="mensaje" name="mensaje" placeholder="Déjanos unas palabras…"></textarea>
+      </div>
+
+      <button type="submit" class="btn gold">Enviar confirmación</button>
+      <p class="form-note">Tus datos solo se usarán para organizar el evento.</p>
+    </form>
+
+    <!-- Mensaje de éxito (se muestra tras enviar) -->
+    <div class="form-success reveal" id="formSuccess">
+      <div class="ico">✦</div>
+      <h3>¡Gracias!</h3>
+      <p>Hemos recibido tu confirmación. Nos hace muy felices que seas parte de este día.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===============  FOOTER  =============== -->
+<footer>
+  <div class="mono">Isabela &amp; Mateo</div>
+  <div class="fdate">14 de noviembre · 2026</div>
+  <p class="fmsg">Gracias por acompañarnos <span class="heart">♡</span></p>
 </footer>
 
 <script>
-  var burger=document.getElementById('burger'),nav=document.getElementById('nav');
-  burger.addEventListener('click',function(){nav.classList.toggle('open')});
-  nav.addEventListener('click',function(e){if(e.target.tagName==='A')nav.classList.remove('open')});
+/* ============================================================= */
+/*  NAV: aparece al hacer scroll                                  */
+/* ============================================================= */
+const nav = document.getElementById('nav');
+addEventListener('scroll', () => {
+  nav.classList.toggle('show', scrollY > window.innerHeight * 0.7);
+}, {passive:true});
+
+/* ============================================================= */
+/*  REVEAL al hacer scroll                                        */
+/* ============================================================= */
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting){ e.target.classList.add('visible'); io.unobserve(e.target); } });
+}, {threshold:0.15});
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+/* ============================================================= */
+/*  CUENTA REGRESIVA en tiempo real                              */
+/* ============================================================= */
+(function(){
+  const grid = document.getElementById('countdown');
+  const target = new Date(grid.dataset.target).getTime();
+  const dEl=document.getElementById('cd-d'), hEl=document.getElementById('cd-h'),
+        mEl=document.getElementById('cd-m'), sEl=document.getElementById('cd-s'),
+        msg=document.getElementById('cd-msg');
+  const pad = n => String(n).padStart(2,'0');
+  function tick(){
+    const diff = target - Date.now();
+    if (diff <= 0){
+      dEl.textContent=hEl.textContent=mEl.textContent=sEl.textContent='00';
+      msg.textContent = '¡Hoy es el gran día! 🤍';
+      clearInterval(timer);
+      return;
+    }
+    const s=Math.floor(diff/1000);
+    dEl.textContent=pad(Math.floor(s/86400));
+    hEl.textContent=pad(Math.floor(s%86400/3600));
+    mEl.textContent=pad(Math.floor(s%3600/60));
+    sEl.textContent=pad(s%60);
+  }
+  tick();
+  const timer = setInterval(tick, 1000);
+})();
+
+/* ============================================================= */
+/*  GALERÍA + LIGHTBOX                                            */
+/* ============================================================= */
+(function(){
+  // ✎ EDITAR: nº de fotos y nombres. Coloca en /images los archivos 1.jpg … 6.jpg
+  const PHOTOS = ['1.jpg','2.jpg','3.jpg','4.jpg','5.jpg','6.jpg'];
+  const captions = ['Nosotros','Un momento','Juntos','El viaje','La propuesta','Para siempre'];
+
+  const grid = document.getElementById('gallery');
+  const loaded = []; // rutas que realmente cargaron, para el lightbox
+
+  PHOTOS.forEach((file, i) => {
+    const item = document.createElement('figure');
+    item.className = 'g-item';
+    const src = 'images/' + file;
+    item.innerHTML =
+      '<span class="ph">Foto ' + (i+1) + '</span>' +
+      '<img alt="' + captions[i%captions.length] + '" loading="lazy">';
+    const img = item.querySelector('img');
+    img.addEventListener('load', () => { item.classList.add('loaded'); });
+    img.addEventListener('error', () => { /* deja el placeholder elegante */ });
+    img.src = src;
+    item.dataset.src = src;
+    item.dataset.idx = i;
+    item.addEventListener('click', () => openLB(i));
+    grid.appendChild(item);
+  });
+
+  // Lightbox
+  const lb=document.getElementById('lightbox'), lbImg=document.getElementById('lbImg'),
+        lbCount=document.getElementById('lbCount');
+  let cur=0;
+  function openLB(i){ cur=i; render(); lb.classList.add('open'); document.body.style.overflow='hidden'; }
+  function closeLB(){ lb.classList.remove('open'); document.body.style.overflow=''; }
+  function render(){ lbImg.src='images/'+PHOTOS[cur]; lbCount.textContent=(cur+1)+' / '+PHOTOS.length; }
+  function nav(d){ cur=(cur+d+PHOTOS.length)%PHOTOS.length; render(); }
+
+  document.getElementById('lbClose').onclick=closeLB;
+  document.getElementById('lbPrev').onclick=()=>nav(-1);
+  document.getElementById('lbNext').onclick=()=>nav(1);
+  lb.addEventListener('click', e=>{ if(e.target===lb) closeLB(); });
+  addEventListener('keydown', e=>{
+    if(!lb.classList.contains('open')) return;
+    if(e.key==='Escape') closeLB();
+    if(e.key==='ArrowLeft') nav(-1);
+    if(e.key==='ArrowRight') nav(1);
+  });
+})();
+
+/* ============================================================= */
+/*  RSVP · envío a Netlify Forms sin recargar la página          */
+/* ============================================================= */
+(function(){
+  const form = document.getElementById('rsvpForm');
+  const success = document.getElementById('formSuccess');
+  if(!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = new FormData(form);
+    const body = new URLSearchParams(data).toString();
+    try{
+      await fetch('/', {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body
+      });
+      form.style.display='none';
+      success.classList.add('show','visible');
+      success.scrollIntoView({behavior:'smooth', block:'center'});
+    }catch(err){
+      // Si algo falla (p. ej. abriendo el archivo localmente), enviamos de forma normal
+      form.submit();
+    }
+  });
+})();
 </script>
 </body>
 </html>
