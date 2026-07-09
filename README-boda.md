@@ -1,8 +1,11 @@
 # 💍 Invitación de boda — Guía completa
 
-Sitio de invitación de una sola página, elegante y optimizado para celular.
-Todo vive en **`index.html`** (HTML + CSS + JS en un solo archivo), más la carpeta
-**`/images`** para las fotos.
+Sitio de invitación de una sola página, **estética cinematográfica oscura** (eco de la
+Save the Date), optimizado para celular. Todo vive en **`index.html`** (HTML + CSS + JS
+en un solo archivo), más la carpeta **`/images`** para las fotos.
+
+Datos ya cargados: **Sábado 3 de octubre de 2026 · 16:30 hrs · Hacienda Los Eucaliptos,
+Peñaflor**, con las dos opciones de asistencia (Ceremonia + Cóctel / Celebración completa).
 
 ---
 
@@ -12,14 +15,17 @@ Abre `index.html` y busca los comentarios marcados con **`✎ EDITAR`**. Ahí ca
 
 | Qué | Dónde buscar |
 |-----|--------------|
-| Nombres de la pareja | `✎ EDITAR: nombres de la pareja` |
-| Frase de portada | `✎ EDITAR: frase corta` |
-| Fecha visible | `✎ EDITAR: fecha` |
-| **Fecha/hora del countdown** | `data-target="2026-11-14T17:00:00"` (formato `AAAA-MM-DDTHH:MM:SS`, hora local) |
-| Nuestra historia | `✎ EDITAR: mensaje de bienvenida` |
-| Ceremonia y celebración | `✎ EDITAR: ceremonia` / `✎ EDITAR: celebración` |
+| **Segundo nombre de la pareja** (reemplaza `[Nombre]`) | `✎ EDITAR: nombres de la pareja` (y footer, nav, título) |
+| **Foto del hero** (portada a pantalla completa) | coloca `images/hero.jpg` — foto vertical, buena resolución |
+| Fecha visible (`03 | OCT | 26`) | `✎ EDITAR: fecha` |
+| **Fecha/hora del countdown** | `data-target="2026-10-03T16:30:00"` (formato `AAAA-MM-DDTHH:MM:SS`, hora local) |
+| Mensaje de bienvenida | `✎ EDITAR: mensaje de bienvenida` |
+| Opciones de asistencia | `✎ EDITAR: opción 1` / `✎ EDITAR: opción 2` |
 | Dress code y regalos | `✎ EDITAR: dress code` / `✎ EDITAR: regalos` |
-| Título de la pestaña | `✎ EDITAR: título de la pestaña` |
+| Iniciales del nav / título de pestaña | `✎ EDITAR: iniciales` / `✎ EDITAR: título de la pestaña` |
+
+> 💡 **Reemplaza `[Nombre]`** por el segundo nombre de la pareja. Aparece en 4 lugares
+> (portada, firma de la historia, footer y título de la pestaña); búscalo con Ctrl/Cmd+F.
 
 ### Mapa de Google Maps
 

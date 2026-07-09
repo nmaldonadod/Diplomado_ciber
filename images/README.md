@@ -8,6 +8,12 @@ Coloca aquí las fotos que quieres mostrar en la sección **Galería**.
 2. Súbelas a esta carpeta (`/images`).
 3. Listo: aparecerán automáticamente en la galería y en el visor ampliado (lightbox).
 
+## Foto de portada (hero)
+
+Coloca también un archivo **`hero.jpg`** en esta carpeta: es la foto grande a pantalla
+completa de la portada (idealmente **vertical** y de buena resolución, como la de tu Save
+the Date). Si no la pones, la portada se ve igual de elegante con el degradado oscuro.
+
 ## Notas
 
 - Mientras no haya fotos, la galería muestra marcadores elegantes ("Foto 1", "Foto 2"…) para que el sitio se vea bien igual.
