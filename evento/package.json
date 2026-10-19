@@ -1,13 +1,14 @@
 {
-  "name": "evento-ciberseguridad-inacap",
+  "name": "plataforma-eventos-inacap",
   "version": "1.0.0",
   "private": true,
-  "description": "Gestión de evento: registro de estudiantes, acreditación con QR desde el teléfono, talleres con cupos en tiempo real y agenda.",
+  "description": "Plataforma de eventos estudiantiles: inscripción, talleres con cupos en tiempo real, agenda, acreditación con QR y administración.",
   "main": "server.js",
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning server.js",
     "dev": "node --disable-warning=ExperimentalWarning --watch server.js",
-    "test": "node --disable-warning=ExperimentalWarning --test \"test/*.test.js\""
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/*.test.js\"",
+    "ejemplo": "node --disable-warning=ExperimentalWarning scripts/cargar-ejemplo.js"
   },
   "engines": {
     "node": ">=22.13"

@@ -1,95 +1,105 @@
-# App de gestión del evento · Jornada de Ciberseguridad INACAP – ESET
+# Plataforma de eventos INACAP
 
-Aplicación web para estudiantes y staff, pensada para usarse desde el teléfono.
+Aplicación web para gestionar eventos estudiantiles, pensada para usarse desde el teléfono.
+Tiene **tres interfaces**, cada una con sus propios permisos:
 
-| Para estudiantes (`/`) | Para staff (`/staff`) |
-|---|---|
-| Inscripción al evento con RUT validado | Acreditación leyendo el QR con la cámara del teléfono |
-| Entrada digital con código QR | Lee el QR de la **entrada** o el QR de la **cédula de identidad (carnet)** |
-| Elección de talleres (máximo configurable, sin topes de horario) | Búsqueda manual por RUT, nombre o correo |
-| Cupos que se van completando **en tiempo real** | Inscripción presencial (inscribe + acredita en un paso) |
-| Agenda completa por día y filtro “mi agenda” | Panel: inscritos, acreditados, cupos por taller, por sede |
-| Recuperar la entrada en otro dispositivo (RUT + correo) | Exportar CSV (inscritos y listas por taller) |
+| Interfaz | URL | Quién | Qué hace |
+|---|---|---|---|
+| **Estudiante** | `/` | Cualquier estudiante | Ve la agenda y los talleres con cupos en vivo, se inscribe, elige talleres (al inscribirse o después) y obtiene su entrada con código QR |
+| **Acreditador** | `/acreditacion` | Cuentas con rol *acreditador* (o *admin*) | Escanea el QR de la entrada con la cámara del teléfono, busca estudiantes e inscribe presencialmente |
+| **Administrador** | `/admin` | Cuentas con rol *admin* | Configura el evento, crea talleres (título, descripción, cupos, horario, sala, **foto del docente**), arma la agenda, gestiona estudiantes y cuentas, exporta y revisa la auditoría |
 
-## Requisitos
+### Datos que se piden al estudiante
 
-- **Node.js 22.13 o superior.** No hay dependencias npm: usa `node:sqlite` incorporado.
-  Las librerías de QR (`qrcode-generator` MIT, `jsQR` Apache-2.0) están incluidas en `public/vendor/`,
-  así la app funciona aunque el wifi del evento no tenga salida a internet.
+Nombres · Apellidos · Sede (Santiago Centro, Santiago Sur, Rancagua, Talca, Curicó, Apoquindo, Valparaíso) ·
+INACAPMAIL (sólo se aceptan correos `@inacapmail.cl`) · Teléfono · aceptación de la política de privacidad.
+Los talleres se pueden elegir en el mismo formulario o más tarde.
 
-## Uso
+## Puesta en marcha
+
+Requiere **Node.js 22.13 o superior**. No usa dependencias externas (base de datos SQLite incluida en Node).
 
 ```bash
 cd evento
-STAFF_PIN=274913 npm start      # http://localhost:3000  y  http://localhost:3000/staff
-npm test                        # pruebas unitarias y de API
+npm start            # la primera vez muestra en consola un token de configuración
 ```
+
+1. Abre `http://localhost:3000/admin`, ingresa el **token de configuración** que aparece en la consola y crea tu cuenta de administrador.
+2. En **Evento** completa nombre, fechas, lugar y contacto, y publícalo.
+3. En **Talleres** crea los talleres con su foto del docente; en **Agenda**, las charlas y pausas.
+4. En **Usuarios** crea las cuentas de los acreditadores.
+5. Comparte `https://tu-dominio/` con los estudiantes y `https://tu-dominio/acreditacion` con los acreditadores.
+
+¿Quieres probar con datos de ejemplo? `npm run ejemplo` (sólo funciona si aún no hay evento configurado).
 
 ### Variables de entorno
 
-| Variable | Descripción | Por defecto |
-|---|---|---|
-| `STAFF_PIN` | PIN para el staff de acreditación (mín. 4 caracteres) | se genera uno aleatorio y se muestra en consola |
-| `PORT` / `HOST` | Puerto / interfaz | `3000` / `0.0.0.0` |
-| `DATA_DIR` | Carpeta de la base de datos SQLite | `./data` |
-| `EVENTO_CONFIG` | Archivo de configuración del evento | `./config/evento.json` |
-| `SESSION_SECRET` | Secreto para firmar sesiones del staff (si no se define, el staff debe volver a ingresar tras reiniciar) | aleatorio |
-| `TLS_CERT` / `TLS_KEY` | Certificado y llave para servir por HTTPS directamente | — |
-| `TRUST_PROXY` | `1` si corre detrás de un proxy HTTPS (Render, Railway, Nginx, Cloudflare Tunnel…) | — |
+| Variable | Descripción |
+|---|---|
+| `DATA_KEY` | **Recomendada en producción.** Clave de cifrado de datos personales: 32 bytes en base64 (`openssl rand -base64 32`). Si no se define, se genera `data/clave.key`. **Respáldala aparte**: sin ella los correos y teléfonos no se pueden leer. |
+| `DATA_DIR` | Carpeta de la base de datos, fotos y clave (por defecto `./data`, permisos 700) |
+| `PORT` / `HOST` | Puerto e interfaz (por defecto `3000` / `0.0.0.0`) |
+| `TLS_CERT` / `TLS_KEY` | Certificado y llave para servir HTTPS directamente |
+| `TRUST_PROXY` | `1` si está detrás de un proxy HTTPS (Nginx, Render, Railway, Cloudflare). Sólo actívalo en ese caso. |
 
-### ⚠️ La cámara necesita HTTPS
+**La aplicación debe publicarse con HTTPS**: protege los datos en tránsito y, además, los navegadores sólo permiten usar la cámara (para acreditar) en sitios `https://`.
 
-Los navegadores sólo permiten usar la cámara en `https://` (o `localhost`). Opciones:
+## Seguridad y protección de datos personales
 
-- Publicar en un servicio con HTTPS (Render, Railway, Fly.io, una VM con Nginx + Let's Encrypt) con `TRUST_PROXY=1`.
-- En la red local del evento: `TLS_CERT=cert.pem TLS_KEY=key.pem npm start`.
-- Para probar rápido: `cloudflared tunnel --url http://localhost:3000`.
+Diseñada considerando la Ley N.° 19.628 (y su actualización por la Ley N.° 21.719) y las recomendaciones OWASP.
 
-Si la cámara no está disponible, el staff igual puede acreditar escribiendo el RUT.
+**Datos personales**
+- Minimización: sólo se piden los datos necesarios (no RUT, no fotos de estudiantes).
+- Correo y teléfono **cifrados en la base de datos** (AES-256-GCM); la búsqueda por correo usa un índice HMAC, sin guardar el correo en claro.
+- Consentimiento explícito con fecha registrada y política de privacidad pública (`/privacidad`).
+- Acceso según rol: el acreditador ve sólo nombre, sede, talleres y el correo parcialmente oculto; **no** ve teléfonos ni puede exportar.
+- El administrador puede eliminar a un estudiante o **todos los datos** al terminar el evento (con confirmación y contraseña).
+- Las exportaciones CSV quedan registradas en la auditoría.
 
-## Configurar el evento
+**Autenticación y sesiones**
+- Cuentas de staff con contraseñas de mínimo 12 caracteres, hash **scrypt** con sal, bloqueo progresivo tras 5 intentos fallidos y mensajes que no revelan si una cuenta existe.
+- Estudiantes: entran con su INACAPMAIL + un **código de acceso** aleatorio entregado una sola vez (guardado con scrypt, con bloqueo tras 5 intentos). Si lo pierden, el administrador genera uno nuevo.
+- Sesiones del lado del servidor (token aleatorio de 256 bits, guardado como hash), cookies `HttpOnly`, `Secure`, prefijo `__Host-`, `SameSite=Strict` para el staff. Expiración por inactividad (admin 60 min, acreditador 3 h) y absoluta.
+- Al desactivar una cuenta, cambiar su rol o su contraseña se cierran todas sus sesiones. Siempre queda al menos un administrador activo.
+- El primer administrador se crea con un token de un solo uso que sólo aparece en la consola del servidor.
 
-Todo el contenido está en [`config/evento.json`](config/evento.json): nombre, lugar, días, agenda,
-sedes, máximo de talleres por estudiante y talleres (con `cupos`). Al reiniciar, los talleres se
-sincronizan con la base de datos **sin perder las inscripciones**. Para quitar un taller, elimínalo
-del archivo (sus inscripciones quedan ocultas). Las horas se escriben en hora local del evento
-(`"2026-11-12T14:30"`).
+**Aplicación**
+- Validación estricta en el servidor de todos los datos; consultas SQL parametrizadas; transacciones para que los cupos nunca se sobrevendan.
+- Protección CSRF (verificación de `Origin`/`Sec-Fetch-Site` y JSON obligatorio).
+- Cabeceras: CSP estricta (`script-src 'self'`, sin scripts en línea), HSTS, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, COOP/CORP, `Permissions-Policy`.
+- El frontend nunca inserta datos de usuarios como HTML.
+- Fotos de docentes: el navegador las recorta y convierte a JPEG; el servidor sólo acepta JPEG válidos de hasta 2 MB, **elimina los metadatos** (EXIF/GPS) y las guarda con nombre aleatorio.
+- Límites de tamaño de solicitudes y de intentos por IP; errores internos sin detalles para el cliente.
+- CSV protegidos contra inyección de fórmulas.
+- **Auditoría** de ingresos, intentos fallidos, accesos denegados, cambios, acreditaciones, exportaciones y eliminaciones (sin guardar datos personales en el registro).
 
-## Acreditación: qué códigos se leen
+**Recomendaciones de operación**
+- Publicar sólo con HTTPS y definir `DATA_KEY` fuera del servidor.
+- Respaldar `data/` (cifrado) y restringir el acceso al servidor.
+- Entregar las contraseñas iniciales por un canal seguro y pedir que se cambien.
+- Eliminar los datos de estudiantes cuando ya no sean necesarios.
 
-| Código | Contenido | Cómo se identifica |
-|---|---|---|
-| Entrada de la app | `EVT1:XXXXXXXXXXXXXXXX` | código único aleatorio del estudiante |
-| Cédula de identidad chilena (QR del reverso) | `https://portal.sidiv.registrocivil.cl/docstatus?RUN=…` | se extrae y valida el RUN |
-| Credencial / carnet estudiantil con QR | cualquier texto que contenga un RUT con guion | se extrae y valida el RUT |
-| Ingreso manual | `12.345.678-5` | RUT |
+## Pruebas
 
-En Android/Chrome se usa el lector nativo `BarcodeDetector`; en iPhone y otros navegadores se usa `jsQR`.
-Resultado en pantalla, con sonido y vibración: **verde** acreditado · **ámbar** ya estaba acreditado
-(muestra la hora) · **rojo** no inscrito (botón para inscribirlo en el momento). Toda acreditación
-queda registrada con hora y nombre del acreditador, y se puede deshacer.
+```bash
+npm test
+```
 
-## Seguridad
-
-- Sesiones con cookies `HttpOnly` + `SameSite=Lax` (`Secure` bajo HTTPS); token del estudiante guardado como hash SHA-256.
-- Sesión del staff firmada con HMAC; PIN comparado en tiempo constante y con límite de intentos.
-- Límite de intentos en inscripción y recuperación de acceso; verificación de `Origin` en peticiones que modifican datos.
-- Consultas SQL parametrizadas; inscripción a talleres en transacción (no se sobrevenden cupos).
-- Cabeceras CSP estrictas (`script-src 'self'`), `X-Frame-Options`, `nosniff`; el frontend no inserta datos de usuario con `innerHTML`.
-- Exportación CSV protegida contra inyección de fórmulas.
-- Consentimiento explícito para el tratamiento de datos personales al inscribirse.
+Cubren validaciones, cifrado, limpieza de imágenes, reglas de cupos y topes, permisos por rol, CSRF, bloqueo de cuentas, archivos protegidos y el flujo completo admin → estudiante → acreditador.
 
 ## Estructura
 
 ```
 evento/
-├── server.js            # arranque HTTP/HTTPS
-├── config/evento.json   # agenda, talleres y cupos
+├── server.js               # arranque HTTP/HTTPS
+├── scripts/cargar-ejemplo.js
 ├── src/
-│   ├── app.js           # API, sesiones, tiempo real (SSE), archivos estáticos
-│   ├── db.js            # SQLite: estudiantes, talleres, inscripciones, acreditación
-│   ├── qr.js            # interpretación de QR (entrada, cédula, credencial)
-│   └── rut.js           # validación de RUT
-├── public/              # frontend (estudiantes: index.html · staff: staff.html)
-└── test/                # node --test
+│   ├── app.js              # API y permisos por rol
+│   ├── db.js               # SQLite: evento, estudiantes, talleres, agenda, usuarios, auditoría
+│   ├── seguridad.js        # scrypt, cifrado AES-GCM, tokens, limitador, limpieza JPEG
+│   ├── validacion.js       # reglas de validación (sedes, INACAPMAIL, teléfono, contraseñas…)
+│   ├── http.js             # cabeceras de seguridad, cookies, CSRF, lectura de cuerpos
+│   └── qr.js               # interpretación de lo escaneado en la acreditación
+├── public/                 # index.html (estudiante) · acreditacion.html · admin.html · privacidad.html
+└── test/
 ```

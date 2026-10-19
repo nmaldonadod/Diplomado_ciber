@@ -1,6 +1,6 @@
 {
-  "name": "Jornada de Ciberseguridad INACAP · ESET",
-  "short_name": "Jornada Ciber",
+  "name": "Eventos INACAP",
+  "short_name": "Eventos",
   "start_url": "/#/entrada",
   "display": "standalone",
   "background_color": "#f5f6f7",

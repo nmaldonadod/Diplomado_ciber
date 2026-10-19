@@ -58,28 +58,44 @@ function horaReal(isoUtc) {
   return new Date(isoUtc).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
 }
 
-// Formatea un RUT a medida que se escribe: 12.345.678-5
-function formatearRutInput(valor) {
-  const limpio = String(valor).replace(/[^0-9kK]/g, '').toUpperCase().slice(0, 9);
-  if (limpio.length < 2) return limpio;
-  const cuerpo = limpio.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return `${cuerpo}-${limpio.slice(-1)}`;
+const RE_INACAPMAIL = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?@inacapmail\.cl$/i;
+const correoValido = (v) => RE_INACAPMAIL.test(String(v).trim()) && !String(v).includes('..');
+const telefonoValido = (v) => /^(?:\+?56)?\d{9}$/.test(String(v).replace(/[\s().-]/g, ''));
+
+// Campo de formulario con etiqueta y mensaje de error.
+function campo(nombre, etiqueta, attrs = {}) {
+  const { opciones, multilinea, ayuda, ...resto } = attrs;
+  let control;
+  if (opciones) {
+    control = el('select', { id: 'f-' + nombre, name: nombre, ...resto },
+      el('option', { value: '' }, 'Selecciona…'), opciones.map((o) => el('option', { value: o }, o)));
+  } else if (multilinea) {
+    control = el('textarea', { id: 'f-' + nombre, name: nombre, rows: 4, ...resto });
+  } else {
+    control = el('input', { id: 'f-' + nombre, name: nombre, ...resto });
+  }
+  // El error se limpia apenas el usuario corrige el campo.
+  control.addEventListener('input', () => {
+    const c = control.closest('.campo');
+    c?.classList.remove('invalido');
+    const e = c?.querySelector('.err');
+    if (e) e.textContent = '';
+  });
+  return el('div', { class: 'campo', 'data-campo': nombre },
+    el('label', { for: 'f-' + nombre }, etiqueta), control,
+    ayuda && el('small', { class: 'ayuda' }, ayuda),
+    el('span', { class: 'err' }));
 }
 
-function rutValido(valor) {
-  const limpio = String(valor).replace(/[^0-9kK]/g, '').toUpperCase();
-  if (limpio.length < 7) return false;
-  const cuerpo = limpio.slice(0, -1);
-  if (!/^\d+$/.test(cuerpo)) return false;
-  let suma = 0;
-  let f = 2;
-  for (let i = cuerpo.length - 1; i >= 0; i--) {
-    suma += Number(cuerpo[i]) * f;
-    f = f === 7 ? 2 : f + 1;
+function mostrarErrores(form, errores = {}) {
+  for (const c of form.querySelectorAll('[data-campo]')) {
+    const msg = errores[c.dataset.campo];
+    c.classList.toggle('invalido', Boolean(msg));
+    const e = c.querySelector('.err');
+    if (e) e.textContent = msg || '';
   }
-  const r = 11 - (suma % 11);
-  const dv = r === 11 ? '0' : r === 10 ? 'K' : String(r);
-  return dv === limpio.slice(-1);
+  const primero = form.querySelector('.invalido input, .invalido select, .invalido textarea');
+  if (primero) primero.focus();
 }
 
 let temporizadorToast;
@@ -116,11 +132,14 @@ function chipCupo(c) {
   return el('span', { class: 'chip verde' }, 'Disponible');
 }
 
-// Suscripción a cupos en tiempo real (Server-Sent Events) con reconexión automática del navegador.
-function suscribirCupos(alRecibir, alCambiarEstado) {
+// Suscripción en tiempo real (Server-Sent Events) con reconexión automática del navegador.
+//  - cupos:  cambian las inscripciones a talleres
+//  - evento: el administrador modificó agenda, talleres o datos del evento
+function suscribirCambios({ cupos, evento, conexion }) {
   const es = new EventSource('/api/stream');
-  es.addEventListener('cupos', (ev) => alRecibir(JSON.parse(ev.data)));
-  es.addEventListener('open', () => alCambiarEstado?.(true));
-  es.addEventListener('error', () => alCambiarEstado?.(false));
+  if (cupos) es.addEventListener('cupos', (ev) => cupos(JSON.parse(ev.data)));
+  if (evento) es.addEventListener('evento', () => evento());
+  es.addEventListener('open', () => conexion?.(true));
+  es.addEventListener('error', () => conexion?.(false));
   return es;
 }

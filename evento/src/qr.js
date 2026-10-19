@@ -1,16 +1,15 @@
 'use strict';
 
-const { normalizarRut } = require('./rut');
+const { correoInstitucional } = require('./validacion');
 
 const PREFIJO_TICKET = 'EVT1:';
 const RE_TICKET = /^EVT1:([A-Z2-9]{16})$/;
+const RE_CODIGO = /^[A-Z2-9]{16}$/;
 
-// Interpreta el texto leído desde un código QR/barras en la acreditación.
-// Formatos soportados:
-//  - Entrada del evento generada por la app:      EVT1:XXXXXXXXXXXXXXXX
-//  - Cédula de identidad chilena (QR del reverso): https://portal.sidiv.registrocivil.cl/docstatus?RUN=12345678-5&type=CEDULA&...
-//  - Credencial/carnet con un RUT con guion en su contenido (p. ej. carnet estudiantil).
-//  - Un RUT escrito directamente (ingreso manual).
+// Interpreta lo leído por el acreditador (cámara o teclado):
+//  - QR de la entrada digital del estudiante:   EVT1:XXXXXXXXXXXXXXXX
+//  - Código de la entrada escrito a mano:        XXXX XXXX XXXX XXXX
+//  - Correo institucional (escrito o dentro de un QR/credencial): nombre@inacapmail.cl
 function extraerIdentidad(texto) {
   const t = String(texto ?? '').trim().slice(0, 2048);
   if (!t) return null;
@@ -18,32 +17,13 @@ function extraerIdentidad(texto) {
   const ticket = t.toUpperCase().match(RE_TICKET);
   if (ticket) return { tipo: 'ticket', codigo: ticket[1] };
 
-  if (/^https?:\/\//i.test(t)) {
-    try {
-      const url = new URL(t);
-      for (const [clave, valor] of url.searchParams) {
-        if (/^(run|rut)$/i.test(clave)) {
-          const rut = normalizarRut(valor);
-          if (rut) return { tipo: 'rut', rut, fuente: /registrocivil/i.test(url.hostname) ? 'cedula' : 'url' };
-        }
-      }
-    } catch {
-      // URL mal formada: se sigue intentando con los patrones genéricos.
-    }
-  }
+  const compacto = t.toUpperCase().replace(/[\s-]/g, '');
+  if (RE_CODIGO.test(compacto)) return { tipo: 'ticket', codigo: compacto };
 
-  // Texto que es sólo un RUT (con o sin puntos/guion).
-  if (/^[\d.\s]{6,12}-?\s*[\dkK]$/.test(t)) {
-    const rut = normalizarRut(t);
-    if (rut) return { tipo: 'rut', rut, fuente: 'texto' };
+  for (const m of t.matchAll(/[A-Za-z0-9._-]+@inacapmail\.cl\b/gi)) {
+    const email = correoInstitucional(m[0]);
+    if (email) return { tipo: 'email', email };
   }
-
-  // RUT con guion embebido en un texto más largo (credenciales).
-  for (const m of t.matchAll(/(?<![\d.])(\d{1,2}\.?\d{3}\.?\d{3}-[\dkK])(?![\dkK])/g)) {
-    const rut = normalizarRut(m[1]);
-    if (rut) return { tipo: 'rut', rut, fuente: 'credencial' };
-  }
-
   return null;
 }
 
