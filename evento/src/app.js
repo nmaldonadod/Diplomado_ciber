@@ -16,6 +16,8 @@ const MIME = {
   '.webmanifest': 'application/manifest+json',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.woff2': 'font/woff2',
   '.txt': 'text/plain; charset=utf-8',
 };
 
@@ -98,7 +100,7 @@ function crearApp({ db, publicDir, fotosDir, trustProxy = false, tokenInicial = 
     return {
       configurado: Boolean(ev),
       evento: ev && {
-        nombre: ev.nombre, descripcion: ev.descripcion, lugar: ev.lugar, direccion: ev.direccion, contacto: ev.contacto,
+        nombre: ev.nombre, lema: ev.lema, descripcion: ev.descripcion, lugar: ev.lugar, direccion: ev.direccion, contacto: ev.contacto,
         fechaInicio: ev.fecha_inicio, fechaFin: ev.fecha_fin, maxTalleres: ev.max_talleres,
         inscripcionesAbiertas: Boolean(ev.inscripciones_abiertas), talleresAbiertos: Boolean(ev.talleres_abiertos),
       },
@@ -684,7 +686,7 @@ function crearApp({ db, publicDir, fotosDir, trustProxy = false, tokenInicial = 
     if (foto) return servirArchivo(req, res, path.join(fotosDir, foto[1]), 'public, max-age=86400');
     if (PAGINAS[pathname]) return servirArchivo(req, res, path.join(raizPublica, PAGINAS[pathname]), 'no-cache');
     // Sólo se sirven recursos de las carpetas públicas conocidas, con nombres simples.
-    if (!/^\/(css|js|vendor|img)\/[\w.-]+$|^\/[\w-]+\.(webmanifest|svg)$/.test(pathname) || pathname.includes('..')) {
+    if (!/^\/(css|js|vendor|img|fuentes)\/[\w.-]+$|^\/[\w-]+\.(webmanifest|svg)$/.test(pathname) || pathname.includes('..')) {
       return http.enviar(req, res, 404, 'No encontrado', 'text/plain; charset=utf-8');
     }
     const archivo = path.resolve(raizPublica, '.' + pathname);

@@ -127,9 +127,9 @@ function widgetCupo(c, { flash = false } = {}) {
 
 function chipCupo(c) {
   const quedan = (c?.cupos ?? 0) - (c?.inscritos ?? 0);
-  if (quedan <= 0) return el('span', { class: 'chip rojo' }, 'Agotado');
-  if (quedan <= Math.max(3, Math.ceil(c.cupos * 0.15))) return el('span', { class: 'chip ambar' }, 'Últimos cupos');
-  return el('span', { class: 'chip verde' }, 'Disponible');
+  if (quedan <= 0) return el('span', { class: 'chip peligro' }, 'Agotado');
+  if (quedan <= Math.max(3, Math.ceil(c.cupos * 0.15))) return el('span', { class: 'chip alerta' }, 'Últimos cupos');
+  return el('span', { class: 'chip ok' }, 'Disponible');
 }
 
 // Suscripción en tiempo real (Server-Sent Events) con reconexión automática del navegador.

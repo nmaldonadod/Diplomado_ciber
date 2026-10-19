@@ -30,7 +30,7 @@ npm start            # la primera vez muestra en consola un token de configuraci
 4. En **Usuarios** crea las cuentas de los acreditadores.
 5. Comparte `https://tu-dominio/` con los estudiantes y `https://tu-dominio/acreditacion` con los acreditadores.
 
-¿Quieres probar con datos de ejemplo? `npm run ejemplo` (sólo funciona si aún no hay evento configurado).
+Para cargar de una vez el **Mes de la Ciberseguridad 2026** (agenda completa y los 4 talleres en borrador) ejecuta `npm run cargar-evento` antes de `npm start`. Los datos están en `config/mes-ciberseguridad-2026.json`; sólo se cargan si aún no hay evento configurado.
 
 ### Variables de entorno
 
@@ -92,7 +92,8 @@ Cubren validaciones, cifrado, limpieza de imágenes, reglas de cupos y topes, pe
 ```
 evento/
 ├── server.js               # arranque HTTP/HTTPS
-├── scripts/cargar-ejemplo.js
+├── config/mes-ciberseguridad-2026.json   # agenda y talleres del evento
+├── scripts/cargar-evento.js
 ├── src/
 │   ├── app.js              # API y permisos por rol
 │   ├── db.js               # SQLite: evento, estudiantes, talleres, agenda, usuarios, auditoría

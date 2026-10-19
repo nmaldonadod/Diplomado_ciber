@@ -1,0 +1,30 @@
+{
+  "evento": {
+    "nombre": "Mes de la Ciberseguridad",
+    "lema": "Modo Seguro",
+    "descripcion": "Encuentro presencial del Mes de la Ciberseguridad, en el marco de los 60 años de INACAP: charlas principales y talleres prácticos simultáneos.",
+    "lugar": "Aula Magna · INACAP Sede Apoquindo",
+    "direccion": "",
+    "contacto": "",
+    "fecha_inicio": "2026-10-21",
+    "fecha_fin": "2026-10-21",
+    "max_talleres": 1,
+    "inscripciones_abiertas": 1,
+    "talleres_abiertos": 1
+  },
+  "agenda": [
+    { "tipo": "acreditacion", "inicio": "2026-10-21T14:15", "fin": "2026-10-21T14:30", "titulo": "Ingreso y acreditación", "descripcion": "Actividad central", "expositor": "", "lugar": "Aula Magna" },
+    { "tipo": "charla", "inicio": "2026-10-21T14:30", "fin": "2026-10-21T15:00", "titulo": "Apertura institucional", "descripcion": "", "expositor": "Nicolás Valdivieso / Gonzalo Labra", "lugar": "Aula Magna" },
+    { "tipo": "charla", "inicio": "2026-10-21T15:00", "fin": "2026-10-21T15:25", "titulo": "Charla principal 1", "descripcion": "De la preparación a la implementación: roadmap de migración a PQC.", "expositor": "Paulina Assmann", "lugar": "Aula Magna" },
+    { "tipo": "charla", "inicio": "2026-10-21T15:25", "fin": "2026-10-21T15:50", "titulo": "Charla principal 2", "descripcion": "Investigación Criminal en el Ciberespacio: El Rol de la PDI", "expositor": "Danic Maldonado", "lugar": "Aula Magna" },
+    { "tipo": "pausa", "inicio": "2026-10-21T15:50", "fin": "2026-10-21T16:10", "titulo": "Break y distribución a talleres", "descripcion": "", "expositor": "", "lugar": "" },
+    { "tipo": "actividad", "inicio": "2026-10-21T16:10", "fin": "2026-10-21T17:30", "titulo": "Talleres simultáneos", "descripcion": "Lab 404 · Lab 409 · CREA Empresa · Sala 101", "expositor": "", "lugar": "" },
+    { "tipo": "charla", "inicio": "2026-10-21T17:30", "fin": "2026-10-21T17:40", "titulo": "Cierre de jornada", "descripcion": "", "expositor": "", "lugar": "Aula Magna" }
+  ],
+  "talleres": [
+    { "titulo": "Taller · Lab 404", "descripcion": "", "docente": "", "sala": "Lab 404", "inicio": "2026-10-21T16:10", "fin": "2026-10-21T17:30", "cupos": 30, "publicado": false },
+    { "titulo": "Taller · Lab 409", "descripcion": "", "docente": "", "sala": "Lab 409", "inicio": "2026-10-21T16:10", "fin": "2026-10-21T17:30", "cupos": 30, "publicado": false },
+    { "titulo": "Taller · CREA Empresa", "descripcion": "", "docente": "", "sala": "CREA Empresa", "inicio": "2026-10-21T16:10", "fin": "2026-10-21T17:30", "cupos": 30, "publicado": false },
+    { "titulo": "Taller · Sala 101", "descripcion": "", "docente": "", "sala": "Sala 101", "inicio": "2026-10-21T16:10", "fin": "2026-10-21T17:30", "cupos": 30, "publicado": false }
+  ]
+}

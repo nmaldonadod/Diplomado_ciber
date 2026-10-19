@@ -20,6 +20,7 @@ const ESQUEMA = `
   CREATE TABLE IF NOT EXISTS evento (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     nombre TEXT NOT NULL,
+    lema TEXT NOT NULL DEFAULT '',
     descripcion TEXT NOT NULL DEFAULT '',
     lugar TEXT NOT NULL DEFAULT '',
     direccion TEXT NOT NULL DEFAULT '',
@@ -134,6 +135,10 @@ function abrirDB(archivo, cifrador) {
     throw new Error(`${archivo} es de una versión anterior incompatible. Respáldalo y elimínalo para crear uno nuevo.`);
   }
   db.exec(ESQUEMA);
+  // Migración: columna «lema» agregada después de la primera versión.
+  if (!db.prepare("SELECT 1 FROM pragma_table_info('evento') WHERE name = 'lema'").get()) {
+    db.exec("ALTER TABLE evento ADD COLUMN lema TEXT NOT NULL DEFAULT ''");
+  }
 
   function tx(fn) {
     db.exec('BEGIN IMMEDIATE');
@@ -155,15 +160,15 @@ function abrirDB(archivo, cifrador) {
   const evento = {
     get: () => p('SELECT * FROM evento WHERE id = 1').get(),
     guardar(d) {
-      p(`INSERT INTO evento (id, nombre, descripcion, lugar, direccion, contacto, fecha_inicio, fecha_fin, max_talleres,
+      p(`INSERT INTO evento (id, nombre, lema, descripcion, lugar, direccion, contacto, fecha_inicio, fecha_fin, max_talleres,
            inscripciones_abiertas, talleres_abiertos, actualizado_en)
-         VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET nombre = excluded.nombre, descripcion = excluded.descripcion, lugar = excluded.lugar,
+         VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET nombre = excluded.nombre, lema = excluded.lema, descripcion = excluded.descripcion, lugar = excluded.lugar,
            direccion = excluded.direccion, contacto = excluded.contacto, fecha_inicio = excluded.fecha_inicio,
            fecha_fin = excluded.fecha_fin, max_talleres = excluded.max_talleres,
            inscripciones_abiertas = excluded.inscripciones_abiertas, talleres_abiertos = excluded.talleres_abiertos,
            actualizado_en = excluded.actualizado_en`)
-        .run(d.nombre, d.descripcion, d.lugar, d.direccion, d.contacto, d.fecha_inicio, d.fecha_fin, d.max_talleres,
+        .run(d.nombre, d.lema || '', d.descripcion, d.lugar, d.direccion, d.contacto, d.fecha_inicio, d.fecha_fin, d.max_talleres,
           d.inscripciones_abiertas, d.talleres_abiertos, ahora());
       return evento.get();
     },

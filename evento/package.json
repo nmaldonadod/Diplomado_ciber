@@ -8,7 +8,7 @@
     "start": "node --disable-warning=ExperimentalWarning server.js",
     "dev": "node --disable-warning=ExperimentalWarning --watch server.js",
     "test": "node --disable-warning=ExperimentalWarning --test \"test/*.test.js\"",
-    "ejemplo": "node --disable-warning=ExperimentalWarning scripts/cargar-ejemplo.js"
+    "cargar-evento": "node --disable-warning=ExperimentalWarning scripts/cargar-evento.js"
   },
   "engines": {
     "node": ">=22.13"

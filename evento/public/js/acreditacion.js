@@ -183,7 +183,7 @@ function vistaEscanear() {
     el('strong', { style: { fontSize: '1.1rem' } }, 'Escanear entrada'),
     el('p', null, 'Apunta la cámara al código QR de la entrada digital del estudiante.'),
     el('button', {
-      class: 'btn btn-rojo', type: 'button',
+      class: 'btn btn-primario', type: 'button',
       onclick: async (ev) => {
         ev.target.disabled = true;
         try {
@@ -199,7 +199,7 @@ function vistaEscanear() {
   contenedorEscaner = el('div', { class: 'escaner' }, video, el('div', { class: 'mira' }, el('i')), estadoCam, inicio);
 
   const input = el('input', { placeholder: 'Código de entrada o INACAPMAIL', autocomplete: 'off', 'aria-label': 'Código de entrada o correo', maxlength: 120 });
-  const manual = el('form', { class: 'manual' }, input, el('button', { class: 'btn btn-oscuro', type: 'submit' }, 'Acreditar'));
+  const manual = el('form', { class: 'manual' }, input, el('button', { class: 'btn btn-secundario', type: 'submit' }, 'Acreditar'));
   manual.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     if (!input.value.trim()) return;
@@ -220,16 +220,16 @@ function filaEstudiante(e, alCambiar) {
       el('span', { style: { display: 'block' } }, e.talleres.length ? `Talleres: ${e.talleres.map((t) => t.titulo).join(', ')}` : 'Sin talleres')),
     e.acreditadoEn
       ? el('div', { style: { textAlign: 'right' } },
-        el('span', { class: 'chip verde' }, `✓ ${horaReal(e.acreditadoEn)}`),
+        el('span', { class: 'chip ok' }, `✓ ${horaReal(e.acreditadoEn)}`),
         el('button', {
-          class: 'btn btn-linea btn-chico', type: 'button', style: { marginTop: '6px' },
+          class: 'btn btn-contorno btn-chico', type: 'button', style: { marginTop: '6px' },
           onclick: async () => {
             if (!confirm(`¿Deshacer la acreditación de ${nombreDe(e)}?`)) return;
             await api('DELETE', `/api/acreditacion/${e.id}`).then(alCambiar, (x) => toast(x.message, 'error'));
           },
         }, 'Deshacer'))
       : el('button', {
-        class: 'btn btn-verde btn-chico', type: 'button',
+        class: 'btn btn-exito btn-chico', type: 'button',
         onclick: async () => {
           const r = await acreditar({ id: e.id });
           if (r) {
@@ -253,7 +253,7 @@ function vistaBuscar() {
       resultados.replaceChildren(...(lista.length
         ? lista.map((e) => filaEstudiante(e, buscar))
         : [el('p', { class: 'sub' }, 'Sin resultados. '),
-          el('button', { class: 'btn btn-oscuro btn-chico', type: 'button', onclick: () => cambiarPestana('inscribir', { email: correoValido(q) ? q : '' }) }, 'Inscripción presencial')]));
+          el('button', { class: 'btn btn-secundario btn-chico', type: 'button', onclick: () => cambiarPestana('inscribir', { email: correoValido(q) ? q : '' }) }, 'Inscripción presencial')]));
     } catch (e) {
       if (e.status === 401) return iniciar();
       toast(e.message, 'error');
@@ -278,7 +278,7 @@ function vistaInscribir({ email = '' } = {}) {
     el('label', { class: 'check', 'data-campo': 'consentimiento' },
       el('input', { type: 'checkbox', name: 'consentimiento' }),
       el('span', null, 'El estudiante leyó y aceptó la política de privacidad del evento.', el('span', { class: 'err', style: { display: 'block' } }))),
-    el('button', { class: 'btn btn-verde btn-bloque', type: 'submit' }, 'Inscribir y acreditar'));
+    el('button', { class: 'btn btn-exito btn-bloque', type: 'submit' }, 'Inscribir y acreditar'));
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const f = form.elements;
@@ -292,7 +292,7 @@ function vistaInscribir({ email = '' } = {}) {
         el('h2', null, `✓ ${nombreDe(r.estudiante)} inscrito/a y acreditado/a`),
         el('p', null, 'Entrégale su código de acceso para que vea su entrada y elija talleres en la app:'),
         el('div', { class: 'codigo-acceso' }, r.codigoAcceso),
-        el('button', { class: 'btn btn-oscuro', type: 'button', onclick: () => cambiarPestana('escanear') }, 'Continuar'))]);
+        el('button', { class: 'btn btn-secundario', type: 'button', onclick: () => cambiarPestana('escanear') }, 'Continuar'))]);
     } catch (e) {
       mostrarErrores(form, e.datos?.errores);
       aviso.textContent = e.message;

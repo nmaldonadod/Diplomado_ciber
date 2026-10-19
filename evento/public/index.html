@@ -3,18 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#e1251b">
-<title>Eventos INACAP</title>
+<meta name="theme-color" content="#030824">
+<meta name="color-scheme" content="dark">
+<title>Mes de la Ciberseguridad | INACAP</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icono.svg" type="image/svg+xml">
+<link rel="preload" href="/fuentes/krona-one-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fuentes/chakra-petch-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
-<div class="topbar"><div class="wrap"><span>Plataforma de eventos estudiantiles</span><span id="vivo" class="vivo">Cupos en vivo</span></div></div>
 <header class="cab">
   <div class="wrap">
     <a class="lockup" href="#/" aria-label="Inicio">
-      <span class="wm-inacap">INACAP</span><span class="divv"></span><span class="wm-sub">Eventos</span>
+      <img src="/img/logo-inacap-60.png" alt="INACAP 60 años" width="161" height="26">
     </a>
     <nav class="tabs" aria-label="Secciones">
       <a href="#/" data-ruta="inicio">Inicio</a>
@@ -22,6 +24,7 @@
       <a href="#/talleres" data-ruta="talleres">Talleres</a>
       <a href="#/entrada" data-ruta="entrada">Mi entrada</a>
     </nav>
+    <span id="vivo" class="modo" title="Cupos actualizándose en tiempo real"><i aria-hidden="true"></i>En vivo</span>
   </div>
 </header>
 
@@ -29,13 +32,13 @@
   <p class="vacio">Cargando evento…</p>
   <noscript><p class="aviso error">Esta aplicación necesita JavaScript activado.</p></noscript>
 </main>
-<footer class="pie"><a href="/privacidad">Política de privacidad</a></footer>
+<footer class="pie wrap"><a href="/privacidad">Política de privacidad</a></footer>
 
 <nav class="inferior" aria-label="Secciones">
-  <a href="#/" data-ruta="inicio"><span class="i" aria-hidden="true">⌂</span>Inicio</a>
-  <a href="#/agenda" data-ruta="agenda"><span class="i" aria-hidden="true">▦</span>Agenda</a>
-  <a href="#/talleres" data-ruta="talleres"><span class="i" aria-hidden="true">✦</span>Talleres</a>
-  <a href="#/entrada" data-ruta="entrada"><span class="i" aria-hidden="true">▣</span>Mi entrada</a>
+  <a href="#/" data-ruta="inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 4 7v5c0 4.6 3.4 8.3 8 9 4.6-.7 8-4.4 8-9V7l-8-4Z"/><path d="m9 12 2 2 4-4"/></svg>Inicio</a>
+  <a href="#/agenda" data-ruta="agenda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Agenda</a>
+  <a href="#/talleres" data-ruta="talleres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4M7 8l3 2-3 2M12 12h4"/></svg>Talleres</a>
+  <a href="#/entrada" data-ruta="entrada"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2"/></svg>Mi entrada</a>
 </nav>
 
 <script src="/vendor/qrcode.js"></script>

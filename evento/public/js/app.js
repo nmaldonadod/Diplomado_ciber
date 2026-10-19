@@ -51,12 +51,6 @@ function motivoBloqueo(t, seleccion) {
   return null;
 }
 
-function rangoFechas() {
-  const e = ev();
-  if (e.fechaInicio === e.fechaFin) return nombreDia(e.fechaInicio, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  return `${nombreDia(e.fechaInicio, { day: 'numeric', month: 'long' })} al ${nombreDia(e.fechaFin, { day: 'numeric', month: 'long', year: 'numeric' })}`;
-}
-
 function irA(hash) {
   if (location.hash === hash) render();
   else location.hash = hash;
@@ -68,7 +62,31 @@ function fotoDocente(t, tam) {
     t.foto
       ? el('img', { src: t.foto, alt: `Foto de ${t.docente || 'docente'}`, loading: 'lazy', width: tam, height: tam })
       : el('span', { class: 'sin-foto', 'aria-hidden': 'true' }, iniciales),
-    el('span', null, t.docente || 'Docente por confirmar'));
+    el('span', null, el('small', null, 'Docente'), t.docente || 'Por confirmar'));
+}
+
+// Horario general del programa (sin contar la acreditación), p. ej. "14:30 a 17:40 h".
+function horarioEvento() {
+  const items = [...estado.datos.agenda.filter((a) => a.tipo !== 'acreditacion'), ...talleres()];
+  if (!items.length) return '';
+  const inicio = items.map((i) => i.inicio).sort()[0];
+  const fin = items.map((i) => i.fin).sort().pop();
+  return `${hora(inicio)} a ${hora(fin)} h`;
+}
+
+// "Mes de la Ciberseguridad" → ["Mes de la", "Ciberseguridad"], como en la gráfica del evento.
+function partirNombre(nombre) {
+  const m = nombre.match(/^(.*\s(?:de la|del|de los|de las|de))\s+(.+)$/i);
+  return m ? [m[1], m[2]] : ['', nombre];
+}
+
+function cuentaRegresiva() {
+  const e = ev();
+  const hoy = new Date().toLocaleDateString('sv-SE');
+  if (hoy > e.fechaFin) return 'Evento finalizado';
+  if (hoy >= e.fechaInicio) return 'Hoy · en curso';
+  const dias = Math.round((Date.parse(e.fechaInicio) - Date.parse(hoy)) / 86400_000);
+  return dias === 1 ? 'Mañana' : `Faltan ${dias} días`;
 }
 
 // ---------- vistas ----------
@@ -82,26 +100,40 @@ function vistaNoConfigurado() {
 function vistaInicio() {
   const e = ev();
   const acciones = estado.yo
-    ? [el('a', { class: 'btn btn-rojo', href: '#/entrada' }, 'Ver mi entrada'), el('a', { class: 'btn btn-linea', href: '#/talleres' }, 'Mis talleres')]
+    ? [el('a', { class: 'btn btn-primario', href: '#/entrada' }, 'Ver mi entrada'), el('a', { class: 'btn btn-contorno', href: '#/talleres' }, 'Mis talleres')]
     : [
       e.inscripcionesAbiertas
-        ? el('a', { class: 'btn btn-rojo', href: '#/registro' }, 'Inscribirme →')
-        : el('span', { class: 'chip ambar' }, 'Inscripciones cerradas'),
-      el('a', { class: 'btn btn-linea', href: '#/acceso' }, 'Ya estoy inscrito'),
+        ? el('a', { class: 'btn btn-primario', href: '#/registro' }, 'Inscribirme →')
+        : el('span', { class: 'chip alerta' }, 'Inscripciones cerradas'),
+      el('a', { class: 'btn btn-contorno', href: '#/acceso' }, 'Ya estoy inscrito'),
     ];
+
+  const [antes, principal] = partirNombre(e.nombre);
+  const unDia = e.fechaInicio === e.fechaFin;
+  const [anio, mes, dia] = e.fechaInicio.split('-').map(Number);
+  const fecha = new Date(anio, mes - 1, dia);
 
   return [
     el('section', { class: 'hero' },
-      el('span', { class: 'eyebrow' }, 'INACAP'),
-      el('h1', null, e.nombre),
-      e.descripcion && el('p', { class: 'sub' }, e.descripcion),
-      el('div', { class: 'meta' }, el('span', null, '▦ ', rangoFechas()), e.lugar && el('span', null, '⌖ ', e.lugar)),
-      el('div', { class: 'acciones' }, acciones)),
+      el('div', { class: 'contenido' },
+        el('span', { class: 'cuenta' }, cuentaRegresiva()),
+        antes && el('div', { class: 'mes' }, antes),
+        el('h1', null, principal),
+        e.lema && el('div', { class: 'lema' }, el('span', { class: 'modo on', 'aria-hidden': 'true' }, el('i')), e.lema),
+        e.descripcion && el('p', { class: 'desc' }, e.descripcion),
+        el('div', { class: 'fecha-evento' },
+          el('div', { class: 'dia' }, unDia ? String(dia) : `${dia}–${Number(e.fechaFin.slice(8))}`),
+          el('div', { class: 'mesano' }, fecha.toLocaleDateString('es-CL', { month: 'long' }), el('span', null, anio)),
+          el('div', { class: 'donde' },
+            unDia && fecha.toLocaleDateString('es-CL', { weekday: 'long' }), unDia && horarioEvento() && ' · ', horarioEvento(),
+            e.lugar && el('div', null, el('strong', null, e.lugar)))),
+        el('div', { class: 'acciones' }, acciones)),
+      el('div', { class: 'campus', role: 'img', 'aria-label': 'Campus INACAP de noche' })),
 
     estado.yo && el('div', { class: 'aviso ok' }, `Hola ${estado.yo.nombres.split(' ')[0]}, ya estás inscrito. `,
       estado.yo.talleres.length ? `Tienes ${estado.yo.talleres.length} taller(es).` : 'Aún no eliges talleres.'),
 
-    el('div', { class: 'grid grid-2' },
+    el('div', { class: 'grid grid-2 arriba' },
       el('section', { class: 'card' },
         el('h2', null, '¿Cómo participar?'),
         el('ol', { class: 'pasos' },
@@ -117,7 +149,7 @@ function vistaInicio() {
               el('span', { class: 'sub', style: { fontSize: '.8rem', whiteSpace: 'nowrap' } }, `${nombreDia(fechaDe(t.inicio), { weekday: 'short' })} ${hora(t.inicio)}`)),
             vivo(() => widgetCupo(cupoDe(t), { flash: estado.cambiados.has(t.id) }))))
           : el('p', { class: 'sub' }, 'Pronto publicaremos los talleres.'),
-        talleres().length > 0 && el('a', { class: 'btn btn-linea btn-chico', href: '#/talleres' }, 'Ver talleres'))),
+        talleres().length > 0 && el('a', { class: 'btn btn-contorno btn-chico', href: '#/talleres' }, 'Ver talleres'))),
   ];
 }
 
@@ -140,7 +172,7 @@ function selectorTalleres() {
           el('span', { class: 't' }, t.titulo),
           el('span', { class: 'd', style: { display: 'block' } },
             `${nombreDia(fechaDe(t.inicio), { weekday: 'short', day: 'numeric', month: 'short' })} · ${hora(t.inicio)}–${hora(t.fin)}${t.docente ? ' · ' + t.docente : ''}`),
-          motivo && el('span', { class: 'd', style: { display: 'block', color: 'var(--ambar)' } }, motivo),
+          motivo && el('span', { class: 'd', style: { display: 'block', color: 'var(--alerta)' } }, motivo),
           widgetCupo(cupoDe(t))));
     }));
   }
@@ -182,7 +214,7 @@ function vistaRegistro() {
       el('span', null, 'Autorizo el uso de mis datos sólo para gestionar mi participación en este evento, según la ',
         el('a', { href: '/privacidad', target: '_blank', rel: 'noopener' }, 'política de privacidad'), '.',
         el('span', { class: 'err', style: { display: 'block' } }))),
-    el('button', { class: 'btn btn-rojo btn-bloque', type: 'submit' }, 'Inscribirme'),
+    el('button', { class: 'btn btn-primario btn-bloque', type: 'submit' }, 'Inscribirme'),
     el('p', { class: 'sub', style: { marginTop: '14px', fontSize: '.88rem', textAlign: 'center' } },
       '¿Ya te inscribiste? ', el('a', { href: '#/acceso' }, 'Entra con tu código de acceso')));
 
@@ -238,7 +270,7 @@ function vistaBienvenida() {
       el('strong', null, 'Algunos talleres no se pudieron reservar:'),
       el('ul', { style: { margin: '6px 0 0 18px' } }, n.rechazados.map((r) => el('li', null, r.motivo)))),
     el('div', { class: 'acciones' },
-      el('button', { class: 'btn btn-rojo', type: 'button', onclick: () => { estado.codigoNuevo = null; irA('#/entrada'); } }, 'Ya lo guardé, ver mi entrada')));
+      el('button', { class: 'btn btn-primario', type: 'button', onclick: () => { estado.codigoNuevo = null; irA('#/entrada'); } }, 'Ya lo guardé, ver mi entrada')));
 }
 
 function vistaAcceso() {
@@ -251,7 +283,7 @@ function vistaAcceso() {
     aviso,
     campo('email', 'INACAPMAIL', { type: 'email', autocomplete: 'email', required: true, inputmode: 'email' }),
     campo('codigo', 'Código de acceso', { autocomplete: 'off', required: true, maxlength: 12, style: { textTransform: 'uppercase', letterSpacing: '.15em' } }),
-    el('button', { class: 'btn btn-oscuro btn-bloque', type: 'submit' }, 'Entrar'),
+    el('button', { class: 'btn btn-secundario btn-bloque', type: 'submit' }, 'Entrar'),
     el('p', { class: 'sub', style: { marginTop: '14px', fontSize: '.86rem', textAlign: 'center' } },
       '¿Perdiste tu código? Pide uno nuevo a la organización o en el módulo de acreditación.'));
   form.addEventListener('submit', async (evt) => {
@@ -283,25 +315,27 @@ function vistaEntrada() {
     return el('div', { class: 'grid grid-2', style: { maxWidth: '760px', margin: '0 auto' } },
       el('section', { class: 'card' }, el('h2', null, 'Aún no te inscribes'),
         el('p', { class: 'sub' }, 'Inscríbete para obtener tu entrada con código QR y elegir talleres.'),
-        el('div', { class: 'acciones' }, el('a', { class: 'btn btn-rojo', href: '#/registro' }, 'Inscribirme'))),
+        el('div', { class: 'acciones' }, el('a', { class: 'btn btn-primario', href: '#/registro' }, 'Inscribirme'))),
       el('section', { class: 'card' }, el('h2', null, '¿Ya estás inscrito?'),
         el('p', { class: 'sub' }, 'Entra con tu INACAPMAIL y tu código de acceso.'),
-        el('div', { class: 'acciones' }, el('a', { class: 'btn btn-linea', href: '#/acceso' }, 'Entrar'))));
+        el('div', { class: 'acciones' }, el('a', { class: 'btn btn-contorno', href: '#/acceso' }, 'Entrar'))));
   }
   const yo = estado.yo;
   const mios = misTalleres().sort((a, b) => a.inicio.localeCompare(b.inicio));
   const max = ev().maxTalleres;
   return el('div', { style: { maxWidth: '520px', margin: '0 auto' } },
     el('article', { class: 'ticket' },
-      el('div', { class: 'top' }, el('div', { class: 'eyebrow' }, 'Entrada digital'), el('h2', null, ev().nombre)),
+      el('div', { class: 'top' },
+        el('img', { src: '/img/logo-inacap-60.png', alt: 'INACAP 60 años', width: 124, height: 20 }),
+        el('div', { class: 'eyebrow' }, 'Entrada digital'), el('h2', null, ev().nombre)),
       svgQR(yo.qr),
       el('div', { class: 'cod' }, yo.codigo.replace(/(.{4})/g, '$1 ').trim()),
       el('div', { class: 'quien' },
         el('strong', null, nombreCompleto(yo)),
         el('span', { class: 'sub' }, yo.sede),
         el('div', { class: 'estado' }, yo.acreditadoEn
-          ? el('span', { class: 'chip verde' }, `✓ Acreditado ${horaReal(yo.acreditadoEn)}`)
-          : el('span', { class: 'chip ambar' }, 'Pendiente de acreditación')))),
+          ? el('span', { class: 'chip ok' }, `✓ Acreditado ${horaReal(yo.acreditadoEn)}`)
+          : el('span', { class: 'chip alerta' }, 'Pendiente de acreditación')))),
     el('p', { class: 'sub', style: { textAlign: 'center', fontSize: '.86rem', margin: '12px 0 0' } },
       'Muestra este QR en la acreditación. Te recomendamos guardar una captura de pantalla.'),
 
@@ -315,8 +349,8 @@ function vistaEntrada() {
             `${nombreDia(fechaDe(t.inicio), { weekday: 'short', day: 'numeric' })} · ${hora(t.inicio)}–${hora(t.fin)}${t.sala ? ' · ' + t.sala : ''}`)))))
         : el('p', { class: 'sub', style: { marginTop: '8px' } }, 'Todavía no eliges talleres.'),
       el('div', { class: 'acciones' },
-        el('a', { class: 'btn btn-rojo btn-chico', href: '#/talleres' }, mios.length ? 'Cambiar talleres' : 'Elegir talleres'),
-        el('a', { class: 'btn btn-linea btn-chico', href: '#/agenda' }, 'Ver mi agenda'))),
+        el('a', { class: 'btn btn-primario btn-chico', href: '#/talleres' }, mios.length ? 'Cambiar talleres' : 'Elegir talleres'),
+        el('a', { class: 'btn btn-contorno btn-chico', href: '#/agenda' }, 'Ver mi agenda'))),
 
     el('section', { class: 'card', style: { marginTop: '16px' } },
       el('h2', null, 'Mis datos'),
@@ -324,7 +358,7 @@ function vistaEntrada() {
       el('p', { class: 'sub', style: { fontSize: '.82rem', marginTop: '6px' } }, 'Para corregir o eliminar tus datos, escribe a la organización del evento.'),
       el('div', { class: 'acciones' },
         el('button', {
-          class: 'btn btn-linea btn-chico', type: 'button',
+          class: 'btn btn-contorno btn-chico', type: 'button',
           onclick: async () => {
             if (!confirm('¿Cerrar sesión en este dispositivo? Para volver a entrar necesitarás tu código de acceso.')) return;
             await api('POST', '/api/salir', {}).catch(() => {});
@@ -355,21 +389,21 @@ function tarjetaTaller(t) {
   const mio = esMio(t);
   let boton;
   if (!estado.yo) {
-    boton = el('a', { class: 'btn btn-oscuro btn-bloque', href: '#/registro' }, 'Inscríbete al evento para elegir');
+    boton = el('a', { class: 'btn btn-secundario btn-bloque', href: '#/registro' }, 'Inscríbete al evento para elegir');
   } else if (!ev().talleresAbiertos) {
-    boton = el('button', { class: 'btn btn-linea btn-bloque', type: 'button', disabled: true }, mio ? '✓ Inscrito · elección cerrada' : 'Elección de talleres cerrada');
+    boton = el('button', { class: 'btn btn-contorno btn-bloque', type: 'button', disabled: true }, mio ? '✓ Inscrito · elección cerrada' : 'Elección de talleres cerrada');
   } else if (mio) {
-    boton = el('button', { class: 'btn btn-linea btn-bloque', type: 'button' }, 'Cancelar inscripción');
+    boton = el('button', { class: 'btn btn-contorno btn-bloque', type: 'button' }, 'Cancelar inscripción');
   } else {
     const motivo = motivoBloqueo(t, misTalleres());
-    boton = el('button', { class: 'btn btn-rojo btn-bloque', type: 'button', disabled: Boolean(motivo) }, motivo || 'Inscribirme');
+    boton = el('button', { class: 'btn btn-primario btn-bloque', type: 'button', disabled: Boolean(motivo) }, motivo || 'Inscribirme');
   }
   if (boton.tagName === 'BUTTON' && !boton.disabled) boton.addEventListener('click', () => cambiarInscripcion(t, boton));
 
   return el('article', { class: `card taller ${mio ? 'mio' : ''}` },
     el('div', { class: 'cabt' },
       el('span', { class: 'chip' }, 'Taller'),
-      mio ? el('span', { class: 'chip verde' }, '✓ Inscrito') : chipCupo(cupoDe(t))),
+      mio ? el('span', { class: 'chip ok' }, '✓ Inscrito') : chipCupo(cupoDe(t))),
     el('h3', null, t.titulo),
     fotoDocente(t, 44),
     el('div', { class: 'datos', style: { marginTop: '6px' } },
@@ -392,7 +426,7 @@ function vistaTalleres() {
       el('div', null, el('span', { class: 'eyebrow' }, 'Talleres'), el('h1', null, 'Elige tus talleres'),
         el('p', { class: 'sub' }, e.maxTalleres ? `Puedes inscribir hasta ${e.maxTalleres} talleres sin topes de horario. ` : 'Puedes inscribir talleres sin topes de horario. ',
           'Los cupos se actualizan en tiempo real.')),
-      estado.yo && vivo(() => el('span', { class: 'chip oscuro' }, `Elegidos: ${estado.yo.talleres.length}${e.maxTalleres ? ' / ' + e.maxTalleres : ''}`))),
+      estado.yo && vivo(() => el('span', { class: 'chip fuerte' }, `Elegidos: ${estado.yo.talleres.length}${e.maxTalleres ? ' / ' + e.maxTalleres : ''}`))),
     !estado.yo && el('div', { class: 'aviso info' }, 'Para reservar un cupo primero debes ', el('a', { href: '#/registro' }, 'inscribirte en el evento'), '.'),
     !talleres().length && el('p', { class: 'vacio' }, 'Aún no hay talleres publicados.'),
     [...porDia].map(([fecha, lista]) => el('section', { style: { marginBottom: '24px' } },
@@ -428,28 +462,29 @@ function vistaAgenda() {
     .filter((i) => !(estado.soloMia && estado.yo && i.tipo === 'taller' && !esMio(i.taller)))
     .sort((a, b) => a.inicio.localeCompare(b.inicio) || (a.tipo === 'taller') - (b.tipo === 'taller'));
 
+  // Bloques por hora de inicio: los talleres simultáneos quedan juntos, como en el afiche.
   const bloques = [];
   for (const i of items) {
     const ultimo = bloques[bloques.length - 1];
-    if (ultimo && ultimo.inicio === i.inicio) ultimo.items.push(i);
-    else bloques.push({ inicio: i.inicio, items: [i] });
+    if (ultimo && ultimo.inicio === i.inicio) {
+      ultimo.items.push(i);
+      if (i.fin > ultimo.fin) ultimo.fin = i.fin;
+    } else bloques.push({ inicio: i.inicio, fin: i.fin, items: [i] });
   }
 
-  const etiquetas = { charla: 'Charla', taller: 'Taller', pausa: 'Pausa', acreditacion: 'Acreditación', actividad: 'Actividad' };
-  const item = (i) => el('div', { class: `item ${i.clase} ${i.taller && esMio(i.taller) ? 'mio' : ''}` },
-    el('div', { class: 'chips' },
-      el('span', { class: 'chip' }, etiquetas[i.tipo] || i.tipo),
-      i.taller && esMio(i.taller) && el('span', { class: 'chip verde' }, '✓ Mi taller'),
-      i.taller && !esMio(i.taller) && vivo(() => chipCupo(cupoDe(i.taller)))),
+  const item = (i) => el('div', { class: `item ${i.taller && esMio(i.taller) ? 'mio' : ''}` },
+    i.taller && el('div', { class: 'chips' },
+      el('span', { class: 'chip' }, 'Taller'),
+      esMio(i.taller) ? el('span', { class: 'chip ok' }, 'Mi taller') : vivo(() => chipCupo(cupoDe(i.taller)))),
     el('div', { class: 'tit' }, i.titulo),
-    el('div', { class: 'det' }, `${hora(i.inicio)}–${hora(i.fin)}`, i.lugar ? ` · ${i.lugar}` : '', i.expositor ? ` · ${i.expositor}` : ''),
-    !i.taller && i.descripcion && el('div', { class: 'det', style: { whiteSpace: 'pre-line' } }, i.descripcion),
-    i.taller && vivo(() => widgetCupo(cupoDe(i.taller), { flash: estado.cambiados.has(i.taller.id) })),
-    i.taller && !esMio(i.taller) && el('a', { class: 'btn btn-linea btn-chico', href: '#/talleres', style: { marginTop: '8px' } }, 'Ver taller'));
+    i.expositor && el('div', { class: 'quien' }, i.expositor),
+    i.descripcion && !i.taller && el('div', { class: 'det', style: { whiteSpace: 'pre-line' } }, i.descripcion),
+    i.taller && el('div', { class: 'det' }, `${hora(i.inicio)}–${hora(i.fin)}${i.lugar ? ' · ' + i.lugar : ''}`),
+    i.taller && vivo(() => widgetCupo(cupoDe(i.taller), { flash: estado.cambiados.has(i.taller.id) })));
 
   return [
     el('span', { class: 'eyebrow' }, 'Programa'),
-    el('h1', null, 'Agenda del evento'),
+    el('h1', null, nombreDia(estado.dia, { weekday: 'long', day: 'numeric', month: 'long' })),
     el('p', { class: 'sub', style: { marginBottom: '16px' } }, [e.lugar, e.direccion].filter(Boolean).join(' · ')),
     dias.length > 1 && el('div', { class: 'dias', role: 'group', 'aria-label': 'Día' }, dias.map((d) => el('button', {
       type: 'button', 'aria-pressed': String(d === estado.dia),
@@ -458,9 +493,13 @@ function vistaAgenda() {
     estado.yo && el('label', { class: 'filtros check' },
       el('input', { type: 'checkbox', checked: estado.soloMia, onchange: (x) => { estado.soloMia = x.target.checked; render(); } }),
       el('span', null, 'Mostrar sólo mi agenda (actividades generales + mis talleres)')),
-    bloques.length
-      ? bloques.map((b) => el('div', { class: 'linea' }, el('div', { class: 'hora' }, hora(b.inicio)), el('div', null, b.items.map(item))))
-      : el('p', { class: 'vacio' }, 'No hay actividades publicadas para este día.'),
+    el('section', { class: 'card agenda' },
+      el('div', { class: 'agenda-titulo' }, 'AGENDA'),
+      bloques.length
+        ? bloques.map((b) => el('div', { class: `linea ${b.items.every((i) => i.tipo === 'pausa') ? 'pausa' : ''}` },
+          el('div', { class: 'hora' }, `${hora(b.inicio)} – ${hora(b.fin)}`),
+          el('div', { class: 'items' }, b.items.map(item))))
+        : el('p', { class: 'vacio' }, 'No hay actividades publicadas para este día.')),
   ];
 }
 

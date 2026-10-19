@@ -103,6 +103,7 @@ function validarEvento(b) {
   const errores = {};
   const d = {
     nombre: linea(b.nombre, 120),
+    lema: linea(b.lema, 60),
     descripcion: parrafo(b.descripcion, 2000),
     lugar: linea(b.lugar, 120),
     direccion: linea(b.direccion, 160),

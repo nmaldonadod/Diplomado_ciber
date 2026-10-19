@@ -1,10 +1,10 @@
 {
-  "name": "Eventos INACAP",
-  "short_name": "Eventos",
+  "name": "Mes de la Ciberseguridad INACAP",
+  "short_name": "Modo Seguro",
   "start_url": "/#/entrada",
   "display": "standalone",
-  "background_color": "#f5f6f7",
-  "theme_color": "#e1251b",
+  "background_color": "#030824",
+  "theme_color": "#030824",
   "lang": "es-CL",
   "icons": [{ "src": "/icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
 }

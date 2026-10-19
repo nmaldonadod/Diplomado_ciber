@@ -1,69 +1,91 @@
-body.staff{background:#f0f1f3}
-.staff main{padding-top:16px}
-.segmentos{display:grid;grid-template-columns:repeat(3,1fr);background:#fff;border:1px solid var(--borde);border-radius:10px;padding:4px;gap:4px;margin-bottom:16px}
-.segmentos button{border:none;background:transparent;padding:10px 6px;border-radius:7px;font-weight:700;font-size:.9rem;cursor:pointer;color:var(--gris)}
-.segmentos button[aria-pressed="true"]{background:var(--tinta);color:#fff}
+/* Interfaces de staff (acreditación y administración) — mismo tema «Modo Seguro». */
+.staff main { padding-top: 18px }
+.staff #operador { font-family: var(--f-ui); font-weight: 600; font-size: .9rem; color: var(--texto-2); text-align: right }
+.staff #operador a { color: var(--cian) }
+
+/* Selector de pestañas */
+.segmentos, .pestanas {
+  display: flex; gap: 4px; background: var(--panel); border-radius: 999px; padding: 5px; margin-bottom: 18px;
+  box-shadow: 0 0 0 1px var(--linea); overflow-x: auto; scrollbar-width: none
+}
+.segmentos { display: grid; grid-template-columns: repeat(3, 1fr) }
+.segmentos button, .pestanas button {
+  flex: 0 0 auto; border: none; background: transparent; padding: 10px 16px; border-radius: 999px; cursor: pointer;
+  font-family: var(--f-ui); font-weight: 700; font-size: .92rem; letter-spacing: .03em; color: var(--texto-2); white-space: nowrap
+}
+.segmentos button[aria-pressed="true"], .pestanas button[aria-pressed="true"] { background: var(--cian); color: var(--noche); box-shadow: var(--halo-cian) }
 
 /* Escáner */
-.escaner{position:relative;background:#000;border-radius:14px;overflow:hidden;aspect-ratio:3/4;max-height:62vh;width:100%;margin:0 auto}
-@media (min-width:721px){.escaner{aspect-ratio:4/3}}
-.escaner video{width:100%;height:100%;object-fit:cover;display:block}
-.escaner .mira{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
-.escaner .mira i{width:62%;aspect-ratio:1;border:3px solid rgba(255,255,255,.85);border-radius:18px;box-shadow:0 0 0 2000px rgba(0,0,0,.35)}
-.escaner .inicio{position:absolute;inset:0;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;color:#fff;text-align:center;padding:24px}
-.escaner .inicio p{color:rgba(255,255,255,.75);font-size:.9rem;max-width:320px}
-.escaner .estado-cam{position:absolute;top:10px;left:10px;font-size:.75rem;color:#fff;background:rgba(0,0,0,.5);padding:4px 10px;border-radius:20px}
+.escaner { position: relative; background: #000; border-radius: 18px; overflow: hidden; aspect-ratio: 3 / 4; max-height: 62vh; width: 100%; max-width: 100%; margin: 0 auto; box-shadow: 0 0 0 1.5px var(--linea-fuerte), 0 0 40px rgba(46, 230, 240, .15) }
+@media (min-width: 761px) { .escaner { aspect-ratio: 4 / 3 } }
+.escaner video { width: 100%; height: 100%; object-fit: cover; display: block }
+.escaner .mira { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none }
+.escaner .mira i { width: 62%; aspect-ratio: 1; border-radius: 22px; box-shadow: 0 0 0 2000px rgba(3, 8, 36, .5); position: relative;
+  background:
+    linear-gradient(var(--cian), var(--cian)) 0 0 / 34px 3px no-repeat, linear-gradient(var(--cian), var(--cian)) 0 0 / 3px 34px no-repeat,
+    linear-gradient(var(--cian), var(--cian)) 100% 0 / 34px 3px no-repeat, linear-gradient(var(--cian), var(--cian)) 100% 0 / 3px 34px no-repeat,
+    linear-gradient(var(--cian), var(--cian)) 0 100% / 34px 3px no-repeat, linear-gradient(var(--cian), var(--cian)) 0 100% / 3px 34px no-repeat,
+    linear-gradient(var(--cian), var(--cian)) 100% 100% / 34px 3px no-repeat, linear-gradient(var(--cian), var(--cian)) 100% 100% / 3px 34px no-repeat }
+.escaner .mira i::after { content: ""; position: absolute; left: 6%; right: 6%; height: 2px; top: 10%; background: var(--cian); box-shadow: var(--halo-cian); animation: barrido 2.2s ease-in-out infinite alternate }
+@keyframes barrido { to { top: 88% } }
+.escaner .inicio { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; text-align: center; padding: 24px; background: radial-gradient(circle at 50% 40%, rgba(31, 91, 255, .35), rgba(3, 8, 36, .92) 70%) }
+.escaner .inicio strong { font-family: var(--f-display); font-weight: 400; text-transform: uppercase }
+.escaner .inicio p { color: var(--texto-2); font-size: .92rem; max-width: 320px }
+.escaner .estado-cam { position: absolute; top: 12px; left: 12px; font-family: var(--f-ui); font-weight: 700; font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: var(--cian); background: rgba(3, 8, 36, .7); padding: 5px 11px; border-radius: 99px; box-shadow: 0 0 0 1px var(--linea-fuerte) }
 
-/* Resultado */
-.resultado{position:absolute;left:10px;right:10px;bottom:10px;border-radius:14px;padding:16px;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.4);animation:sube .2s ease}
-@keyframes sube{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
-.resultado.ok{background:var(--verde)}
-.resultado.ya{background:var(--ambar)}
-.resultado.no{background:var(--rojo-osc)}
-.resultado .grande{font-size:1.35rem;font-weight:800;line-height:1.15}
-.resultado .nombre{font-size:1.1rem;font-weight:700;margin-top:6px}
-.resultado .mini{font-size:.85rem;opacity:.9}
-.resultado ul{margin:8px 0 0 18px;font-size:.85rem}
-.resultado .acciones .btn{background:#fff;color:var(--tinta)}
-.resultado .acciones .btn.sec{background:transparent;color:#fff;border-color:rgba(255,255,255,.6)}
-.manual{display:flex;gap:8px;margin-top:12px}
-.manual input{flex:1;padding:12px 14px;border:1.5px solid #cfd3d8;border-radius:8px;font-size:1rem;min-width:0}
+/* Resultado de la lectura */
+.resultado { position: absolute; left: 12px; right: 12px; bottom: 12px; border-radius: 16px; padding: 18px; color: var(--noche); box-shadow: 0 14px 40px rgba(0, 0, 0, .55); animation: sube .2s ease }
+@keyframes sube { from { transform: translateY(20px); opacity: 0 } to { transform: none; opacity: 1 } }
+.resultado.ok { background: var(--ok) }
+.resultado.ya { background: var(--alerta) }
+.resultado.no { background: var(--peligro) }
+.resultado .grande { font-family: var(--f-display); font-size: 1.15rem; line-height: 1.2; text-transform: uppercase }
+.resultado .nombre { font-family: var(--f-ui); font-size: 1.25rem; font-weight: 700; margin-top: 8px }
+.resultado .mini { font-size: .88rem; opacity: .85 }
+.resultado ul { margin: 8px 0 0 18px; font-size: .88rem }
+.resultado .acciones { margin-top: 12px }
+.resultado .acciones .btn { background: var(--noche); color: var(--texto); border-color: transparent }
+.resultado .acciones .btn.sec { background: transparent; color: var(--noche); border-color: rgba(3, 8, 36, .5) }
+.manual { display: flex; gap: 8px; margin-top: 14px }
+.manual input, .manual select { flex: 1; min-width: 0; padding: 12px 14px; border: 1.5px solid var(--linea); border-radius: 999px; font-size: 1rem; background: rgba(3, 8, 36, .55); color: var(--texto) }
+.manual input:focus, .manual select:focus { outline: none; border-color: var(--cian); box-shadow: 0 0 0 3px var(--cian-suave) }
+.manual select option { background: var(--panel-solido) }
 
 /* Listas */
-.fila{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--borde)}
-.fila:last-child{border-bottom:none}
-.fila .q strong{display:block}
-.fila .q span{font-size:.84rem;color:var(--gris)}
-.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
-@media (min-width:721px){.kpis{grid-template-columns:repeat(4,1fr)}}
-.kpi{background:#fff;border:1px solid var(--borde);border-radius:12px;padding:14px 16px}
-.kpi .n{font-size:1.8rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
-.kpi .l{font-size:.8rem;color:var(--gris)}
-.tabla{width:100%;border-collapse:collapse;font-size:.88rem}
-.tabla th,.tabla td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--borde)}
-.tabla th{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--gris)}
+.fila { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--linea) }
+.fila:last-child { border-bottom: none }
+.fila .q { min-width: 0 }
+.fila .q strong { display: block; font-family: var(--f-ui); font-size: 1.02rem }
+.fila .q span { font-size: .86rem; color: var(--texto-2) }
+.fila .q .cupo strong { display: inline }
+.fila .q .cupo { max-width: 420px }
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px }
+@media (min-width: 761px) { .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)) } }
+.kpi { background: var(--panel); border-radius: var(--radio); padding: 16px 18px; box-shadow: var(--brillo); position: relative; overflow: hidden }
+.kpi::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; background: var(--cian); box-shadow: var(--halo-cian) }
+.kpi .n { font-family: var(--f-display); font-size: 1.75rem; line-height: 1.1; font-variant-numeric: tabular-nums }
+.kpi .l { font-family: var(--f-ui); font-weight: 600; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: var(--texto-2); margin-top: 4px }
+.tabla { width: 100%; border-collapse: collapse; font-size: .9rem; font-variant-numeric: tabular-nums }
+.tabla th, .tabla td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--linea); vertical-align: top }
+.tabla th { font-family: var(--f-ui); font-size: .74rem; text-transform: uppercase; letter-spacing: .1em; color: var(--cian) }
+.tabla td small { color: var(--texto-3) }
+.tabla-scroll { overflow-x: auto }
 
 /* Administración */
-.pestanas{display:flex;gap:4px;overflow-x:auto;background:#fff;border:1px solid var(--borde);border-radius:10px;padding:4px;margin-bottom:16px;scrollbar-width:thin}
-.pestanas button{flex:0 0 auto;border:none;background:transparent;padding:9px 14px;border-radius:7px;font-weight:700;font-size:.88rem;cursor:pointer;color:var(--gris);white-space:nowrap}
-.pestanas button[aria-pressed="true"]{background:var(--tinta);color:#fff}
-.barra-acciones{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
-.barra-acciones h1{margin:0;font-size:1.4rem}
-.lista-admin .fila .q strong{font-size:.98rem}
-.lista-admin .fila .btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-.foto-taller{display:flex;align-items:center;gap:14px;margin-bottom:14px}
-.foto-taller img,.foto-taller .vacia{width:84px;height:84px;border-radius:50%;object-fit:cover;background:var(--gris-2);display:flex;align-items:center;justify-content:center;color:var(--gris);font-size:.75rem;text-align:center}
-.miniatura{width:40px;height:40px;border-radius:50%;object-fit:cover;background:var(--gris-2);flex:0 0 auto}
-.filtros-admin{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px}
-@media (min-width:721px){.filtros-admin{grid-template-columns:2fr 1fr 1fr}}
-.filtros-admin input,.filtros-admin select{padding:10px 12px;border:1.5px solid #cfd3d8;border-radius:8px;font-size:.95rem;width:100%;background:#fff}
-.modal-fondo{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 12px}
-.modal{background:#fff;border-radius:14px;max-width:640px;width:100%;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative}
-.modal .cerrar{position:absolute;top:10px;right:10px;border:none;background:var(--gris-2);border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:1.1rem}
-.zona-peligro{border:1.5px solid var(--rojo);background:#fffafa}
-.tabla-scroll{overflow-x:auto}
-.tabla td small{color:var(--gris)}
-.interruptor{display:flex;gap:10px;align-items:center;margin-bottom:12px;font-weight:600;font-size:.92rem}
-.interruptor input{width:20px;height:20px;accent-color:var(--verde)}
-.fila .q .cupo strong{display:inline}
-.fila .q .cupo{max-width:420px}
+.barra-acciones { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px }
+.barra-acciones h1 { margin: 0; font-size: 1.35rem }
+.lista-admin .fila .btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-items: center }
+.foto-taller { display: flex; align-items: center; gap: 16px; margin-bottom: 16px }
+.foto-taller img, .foto-taller .vacia { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; background: var(--panel-2); display: flex; align-items: center; justify-content: center; color: var(--texto-3); font-size: .75rem; text-align: center; box-shadow: 0 0 0 2px var(--noche), 0 0 0 3.5px var(--cian) }
+.miniatura { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; background: var(--panel-2); flex: 0 0 auto; box-shadow: 0 0 0 1.5px var(--linea-fuerte) }
+.filtros-admin { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 12px }
+@media (min-width: 761px) { .filtros-admin { grid-template-columns: 2fr 1fr 1fr } }
+.filtros-admin input, .filtros-admin select { padding: 11px 14px; border: 1.5px solid var(--linea); border-radius: var(--radio-chico); font-size: .95rem; width: 100%; background: rgba(3, 8, 36, .55); color: var(--texto) }
+.filtros-admin select option { background: var(--panel-solido) }
+.modal-fondo { position: fixed; inset: 0; background: rgba(1, 4, 20, .72); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 40; display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: max(24px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 24px max(12px, env(safe-area-inset-left, 0px)) }
+.modal { background: linear-gradient(180deg, var(--panel-solido), var(--abismo)); border-radius: 18px; max-width: 660px; width: 100%; padding: 24px; box-shadow: 0 0 0 1px var(--linea-fuerte), 0 30px 80px rgba(0, 0, 0, .6); position: relative }
+.modal h2 { padding-right: 40px }
+.modal .cerrar { position: absolute; top: 12px; right: 12px; border: none; background: var(--panel-2); color: var(--texto); border-radius: 50%; width: 36px; height: 36px; cursor: pointer; font-size: 1.2rem }
+.zona-peligro { box-shadow: 0 0 0 1.5px var(--peligro), 0 18px 50px rgba(0, 4, 30, .55) }
+.interruptor { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; font-family: var(--f-ui); font-weight: 600; font-size: .95rem; cursor: pointer }
+.interruptor input { width: 20px; height: 20px; accent-color: var(--cian) }

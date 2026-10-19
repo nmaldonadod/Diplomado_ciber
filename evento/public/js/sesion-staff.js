@@ -11,7 +11,7 @@ function formularioLogin({ titulo, alEntrar }) {
     aviso,
     campo('email', 'Correo', { type: 'email', autocomplete: 'username', required: true, maxlength: 120 }),
     campo('clave', 'Contraseña', { type: 'password', autocomplete: 'current-password', required: true, maxlength: 128 }),
-    el('button', { class: 'btn btn-oscuro btn-bloque', type: 'submit' }, 'Ingresar'));
+    el('button', { class: 'btn btn-secundario btn-bloque', type: 'submit' }, 'Ingresar'));
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const boton = form.querySelector('button');
@@ -41,7 +41,7 @@ function formularioConfiguracionInicial(alTerminar) {
     campo('nombre', 'Tu nombre', { required: true, maxlength: 80 }),
     campo('email', 'Correo', { type: 'email', required: true, autocomplete: 'username' }),
     campo('clave', 'Contraseña', { type: 'password', required: true, autocomplete: 'new-password', ayuda: 'Mínimo 12 caracteres, con mayúsculas, minúsculas, números o símbolos.' }),
-    el('button', { class: 'btn btn-rojo btn-bloque', type: 'submit' }, 'Crear administrador'));
+    el('button', { class: 'btn btn-primario btn-bloque', type: 'submit' }, 'Crear administrador'));
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const f = form.elements;
@@ -65,7 +65,7 @@ function formularioCambioClave(alTerminar) {
     aviso,
     campo('actual', 'Contraseña actual', { type: 'password', autocomplete: 'current-password' }),
     campo('nueva', 'Nueva contraseña', { type: 'password', autocomplete: 'new-password', ayuda: 'Mínimo 12 caracteres, con al menos tres tipos de caracteres.' }),
-    el('button', { class: 'btn btn-oscuro', type: 'submit' }, 'Cambiar contraseña'));
+    el('button', { class: 'btn btn-secundario', type: 'submit' }, 'Cambiar contraseña'));
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     try {

@@ -91,7 +91,7 @@ async function vistaResumen() {
         s.ultimas.length
           ? s.ultimas.map((u) => el('div', { class: 'fila' },
             el('div', { class: 'q' }, el('strong', null, nombreDe(u)), el('span', null, `${u.sede}${u.acreditador ? ' · por ' + u.acreditador : ''}`)),
-            el('span', { class: 'chip verde' }, horaReal(u.acreditado_en))))
+            el('span', { class: 'chip ok' }, horaReal(u.acreditado_en))))
           : el('p', { class: 'sub' }, 'Aún no hay acreditaciones.')),
       el('section', { class: 'card' }, el('h2', null, 'Por sede'),
         el('table', { class: 'tabla' },
@@ -100,8 +100,8 @@ async function vistaResumen() {
         el('h2', { style: { marginTop: '18px' } }, 'Exportar (CSV)'),
         el('p', { class: 'sub', style: { fontSize: '.82rem' } }, 'Contiene datos personales: guárdalo en un lugar seguro y elimínalo cuando ya no lo necesites. Cada descarga queda registrada.'),
         el('div', { class: 'acciones' },
-          el('a', { class: 'btn btn-linea btn-chico', href: '/api/admin/exportar/estudiantes.csv' }, 'Estudiantes'),
-          el('a', { class: 'btn btn-linea btn-chico', href: '/api/admin/exportar/talleres.csv' }, 'Listas por taller')))),
+          el('a', { class: 'btn btn-contorno btn-chico', href: '/api/admin/exportar/estudiantes.csv' }, 'Estudiantes'),
+          el('a', { class: 'btn btn-contorno btn-chico', href: '/api/admin/exportar/talleres.csv' }, 'Listas por taller')))),
   ];
 }
 
@@ -111,9 +111,10 @@ async function vistaResumen() {
 
 async function vistaEvento() {
   const { evento: e } = await llamar('GET', '/api/admin/resumen');
-  const ev = e || { nombre: '', descripcion: '', lugar: '', direccion: '', contacto: '', fecha_inicio: '', fecha_fin: '', max_talleres: 2, inscripciones_abiertas: 1, talleres_abiertos: 1 };
+  const ev = e || { nombre: '', lema: '', descripcion: '', lugar: '', direccion: '', contacto: '', fecha_inicio: '', fecha_fin: '', max_talleres: 2, inscripciones_abiertas: 1, talleres_abiertos: 1 };
   const form = el('form', { class: 'card', novalidate: true },
-    campo('nombre', 'Nombre del evento', { value: ev.nombre, maxlength: 120 }),
+    campo('nombre', 'Nombre del evento', { value: ev.nombre, maxlength: 120, ayuda: 'Ej: Mes de la Ciberseguridad. En la portada se destaca la última palabra.' }),
+    campo('lema', 'Lema (opcional)', { value: ev.lema || '', maxlength: 60, placeholder: 'Ej: Modo Seguro' }),
     campo('descripcion', 'Descripción', { multilinea: true, maxlength: 2000 }),
     el('div', { class: 'grid grid-2', style: { gap: '0 16px' } },
       campo('fecha_inicio', 'Fecha de inicio', { type: 'date', value: ev.fecha_inicio }),
@@ -124,11 +125,11 @@ async function vistaEvento() {
       campo('max_talleres', 'Máximo de talleres por estudiante', { type: 'number', min: 0, max: 20, value: ev.max_talleres, ayuda: '0 = sin límite' })),
     el('label', { class: 'interruptor' }, el('input', { type: 'checkbox', name: 'inscripciones_abiertas', checked: Boolean(ev.inscripciones_abiertas) }), 'Inscripciones al evento abiertas'),
     el('label', { class: 'interruptor' }, el('input', { type: 'checkbox', name: 'talleres_abiertos', checked: Boolean(ev.talleres_abiertos) }), 'Estudiantes pueden elegir/cambiar talleres'),
-    el('button', { class: 'btn btn-rojo', type: 'submit' }, e ? 'Guardar cambios' : 'Publicar evento'));
+    el('button', { class: 'btn btn-primario', type: 'submit' }, e ? 'Guardar cambios' : 'Publicar evento'));
   form.elements.descripcion.value = ev.descripcion;
   alEnviar(form, async (f) => {
     await llamar('PUT', '/api/admin/evento', {
-      nombre: f.nombre.value, descripcion: f.descripcion.value, fecha_inicio: f.fecha_inicio.value, fecha_fin: f.fecha_fin.value,
+      nombre: f.nombre.value, lema: f.lema.value, descripcion: f.descripcion.value, fecha_inicio: f.fecha_inicio.value, fecha_fin: f.fecha_fin.value,
       lugar: f.lugar.value, direccion: f.direccion.value, contacto: f.contacto.value, max_talleres: Number(f.max_talleres.value),
       inscripciones_abiertas: f.inscripciones_abiertas.checked, talleres_abiertos: f.talleres_abiertos.checked,
     });
@@ -173,10 +174,10 @@ function formularioTaller(t, alGuardar) {
     vistaFoto.replaceChildren(
       src ? el('img', { src, alt: 'Foto del docente' }) : el('span', { class: 'vacia' }, 'Sin foto'),
       el('div', null,
-        el('label', { class: 'btn btn-linea btn-chico', for: 'f-foto' }, src ? 'Cambiar foto' : 'Subir foto del docente'),
+        el('label', { class: 'btn btn-contorno btn-chico', for: 'f-foto' }, src ? 'Cambiar foto' : 'Subir foto del docente'),
         el('input', { id: 'f-foto', type: 'file', accept: 'image/jpeg,image/png,image/webp', class: 'sr', onchange: elegirFoto }),
         src && !nuevo && t.foto && el('button', {
-          class: 'btn btn-linea btn-chico', type: 'button', style: { marginLeft: '6px' },
+          class: 'btn btn-contorno btn-chico', type: 'button', style: { marginLeft: '6px' },
           onclick: async () => {
             if (!confirm('¿Quitar la foto del docente?')) return;
             t = await llamar('DELETE', `/api/admin/talleres/${t.id}/foto`);
@@ -209,7 +210,7 @@ function formularioTaller(t, alGuardar) {
       campo('sala', 'Sala', { value: t.sala, maxlength: 80 }),
       campo('cupos', 'Cupos', { type: 'number', min: 1, max: 5000, value: t.cupos, ayuda: t.inscritos ? `Inscritos actualmente: ${t.inscritos}` : null })),
     el('label', { class: 'interruptor' }, el('input', { type: 'checkbox', name: 'publicado', checked: t.publicado }), 'Publicado (visible para estudiantes)'),
-    el('button', { class: 'btn btn-rojo', type: 'submit' }, nuevo ? 'Crear taller' : 'Guardar cambios'));
+    el('button', { class: 'btn btn-primario', type: 'submit' }, nuevo ? 'Crear taller' : 'Guardar cambios'));
   form.elements.descripcion.value = t.descripcion;
 
   alEnviar(form, async (f) => {
@@ -256,7 +257,7 @@ async function vistaTalleres() {
   return [
     el('div', { class: 'barra-acciones' },
       el('h1', null, 'Talleres'),
-      el('button', { class: 'btn btn-rojo btn-chico', type: 'button', onclick: () => editar(null) }, '+ Nuevo taller')),
+      el('button', { class: 'btn btn-primario btn-chico', type: 'button', onclick: () => editar(null) }, '+ Nuevo taller')),
     el('section', { class: 'card lista-admin' },
       lista.length
         ? lista.map((t) => el('div', { class: 'fila' },
@@ -267,10 +268,10 @@ async function vistaTalleres() {
               el('span', null, `${rango(t)}${t.sala ? ' · ' + t.sala : ''}${t.docente ? ' · ' + t.docente : ''}`),
               widgetCupo({ cupos: t.cupos, inscritos: t.inscritos }))),
           el('div', { class: 'btns' },
-            el('button', { class: 'btn btn-linea btn-chico', type: 'button', onclick: () => verInscritosTaller(t) }, 'Inscritos'),
-            el('button', { class: 'btn btn-oscuro btn-chico', type: 'button', onclick: () => editar(t) }, 'Editar'),
+            el('button', { class: 'btn btn-contorno btn-chico', type: 'button', onclick: () => verInscritosTaller(t) }, 'Inscritos'),
+            el('button', { class: 'btn btn-secundario btn-chico', type: 'button', onclick: () => editar(t) }, 'Editar'),
             el('button', {
-              class: 'btn btn-linea btn-chico', type: 'button',
+              class: 'btn btn-contorno btn-chico', type: 'button',
               onclick: async () => {
                 const aviso = t.inscritos ? ` Se anularán ${t.inscritos} inscripciones.` : '';
                 if (!confirm(`¿Eliminar el taller «${t.titulo}»?${aviso}`)) return;
@@ -302,7 +303,7 @@ function formularioAgenda(a, alGuardar) {
       campo('inicio', 'Inicio', { type: 'datetime-local', value: a.inicio }),
       campo('fin', 'Término', { type: 'datetime-local', value: a.fin })),
     campo('lugar', 'Lugar', { value: a.lugar, maxlength: 80 }),
-    el('button', { class: 'btn btn-rojo', type: 'submit' }, nuevo ? 'Agregar a la agenda' : 'Guardar'));
+    el('button', { class: 'btn btn-primario', type: 'submit' }, nuevo ? 'Agregar a la agenda' : 'Guardar'));
   form.elements.descripcion.value = a.descripcion;
   alEnviar(form, async (f) => {
     await llamar(nuevo ? 'POST' : 'PUT', nuevo ? '/api/admin/agenda' : `/api/admin/agenda/${a.id}`, {
@@ -326,16 +327,16 @@ async function vistaAgenda() {
   return [
     el('div', { class: 'barra-acciones' },
       el('h1', null, 'Agenda'),
-      el('button', { class: 'btn btn-rojo btn-chico', type: 'button', onclick: () => editar(null) }, '+ Nueva actividad')),
+      el('button', { class: 'btn btn-primario btn-chico', type: 'button', onclick: () => editar(null) }, '+ Nueva actividad')),
     el('p', { class: 'sub', style: { marginBottom: '12px' } }, 'Charlas, pausas y actividades generales. Los talleres aparecen automáticamente en la agenda de los estudiantes.'),
     el('section', { class: 'card lista-admin' },
       lista.length
         ? lista.map((a) => el('div', { class: 'fila' },
           el('div', { class: 'q' }, el('strong', null, a.titulo), el('span', null, `${TIPOS[a.tipo] || a.tipo} · ${rango(a)}${a.lugar ? ' · ' + a.lugar : ''}`)),
           el('div', { class: 'btns' },
-            el('button', { class: 'btn btn-oscuro btn-chico', type: 'button', onclick: () => editar(a) }, 'Editar'),
+            el('button', { class: 'btn btn-secundario btn-chico', type: 'button', onclick: () => editar(a) }, 'Editar'),
             el('button', {
-              class: 'btn btn-linea btn-chico', type: 'button',
+              class: 'btn btn-contorno btn-chico', type: 'button',
               onclick: async () => {
                 if (!confirm(`¿Eliminar «${a.titulo}» de la agenda?`)) return;
                 await llamar('DELETE', `/api/admin/agenda/${a.id}`).catch((e) => toast(e.message, 'error'));
@@ -370,17 +371,17 @@ async function detalleEstudiante(id, alCambiar) {
     el('p', null, el('strong', null, e.email), el('br'), el('span', { class: 'sub' }, `${e.telefono} · ${e.sede}`)),
     el('p', { class: 'sub', style: { fontSize: '.84rem' } },
       `Inscrito: ${new Date(e.creadoEn).toLocaleString('es-CL')} (${e.origen}) · Consentimiento: ${e.consentimientoEn ? new Date(e.consentimientoEn).toLocaleString('es-CL') : '—'}`),
-    el('p', null, e.acreditadoEn ? el('span', { class: 'chip verde' }, `✓ Acreditado ${new Date(e.acreditadoEn).toLocaleString('es-CL')}`) : el('span', { class: 'chip ambar' }, 'No acreditado')),
+    el('p', null, e.acreditadoEn ? el('span', { class: 'chip ok' }, `✓ Acreditado ${new Date(e.acreditadoEn).toLocaleString('es-CL')}`) : el('span', { class: 'chip alerta' }, 'No acreditado')),
     el('h3', { style: { marginTop: '14px' } }, 'Talleres'),
     e.talleres.length
       ? el('div', null, e.talleres.map((t) => el('div', { class: 'fila' }, el('div', { class: 'q' }, el('strong', null, t.titulo), el('span', null, rango(t))),
         el('button', {
-          class: 'btn btn-linea btn-chico', type: 'button',
+          class: 'btn btn-contorno btn-chico', type: 'button',
           onclick: accion(async () => { await llamar('DELETE', `/api/admin/estudiantes/${id}/talleres/${t.id}`); recargar(); }),
         }, 'Quitar'))))
       : el('p', { class: 'sub' }, 'Sin talleres.'),
     disponibles.length > 0 && el('div', { class: 'manual' }, selector, el('button', {
-      class: 'btn btn-oscuro', type: 'button',
+      class: 'btn btn-secundario', type: 'button',
       onclick: accion(async () => {
         if (!selector.value) return;
         await llamar('POST', `/api/admin/estudiantes/${id}/talleres/${selector.value}`);
@@ -390,10 +391,10 @@ async function detalleEstudiante(id, alCambiar) {
     el('p', { class: 'sub', style: { fontSize: '.78rem', marginTop: '4px' } }, 'Como administrador puedes inscribir aunque la elección esté cerrada (se respetan cupos y topes).'),
     el('div', { class: 'acciones', style: { marginTop: '18px' } },
       e.acreditadoEn
-        ? el('button', { class: 'btn btn-linea btn-chico', type: 'button', onclick: accion(async () => { await llamar('DELETE', `/api/acreditacion/${id}`); recargar(); }) }, 'Deshacer acreditación')
-        : el('button', { class: 'btn btn-verde btn-chico', type: 'button', onclick: accion(async () => { await llamar('POST', '/api/acreditacion/acreditar', { id }); recargar(); }) }, 'Acreditar'),
+        ? el('button', { class: 'btn btn-contorno btn-chico', type: 'button', onclick: accion(async () => { await llamar('DELETE', `/api/acreditacion/${id}`); recargar(); }) }, 'Deshacer acreditación')
+        : el('button', { class: 'btn btn-exito btn-chico', type: 'button', onclick: accion(async () => { await llamar('POST', '/api/acreditacion/acreditar', { id }); recargar(); }) }, 'Acreditar'),
       el('button', {
-        class: 'btn btn-linea btn-chico', type: 'button',
+        class: 'btn btn-contorno btn-chico', type: 'button',
         onclick: accion(async () => {
           if (!confirm('¿Generar un nuevo código de acceso? El anterior dejará de funcionar y se cerrarán sus sesiones.')) return;
           const r = await llamar('POST', `/api/admin/estudiantes/${id}/codigo-acceso`);
@@ -403,7 +404,7 @@ async function detalleEstudiante(id, alCambiar) {
         }),
       }, 'Nuevo código de acceso'),
       el('button', {
-        class: 'btn btn-linea btn-chico', type: 'button', style: { color: 'var(--rojo-osc)' },
+        class: 'btn btn-contorno btn-chico', type: 'button', style: { color: 'var(--peligro)' },
         onclick: accion(async () => {
           if (!confirm(`¿Eliminar definitivamente a ${nombreDe(e)} y todos sus datos? Esta acción no se puede deshacer.`)) return;
           await llamar('DELETE', `/api/admin/estudiantes/${id}`);
@@ -433,11 +434,11 @@ async function vistaEstudiantes() {
           el('div', { class: 'q' }, el('strong', null, nombreDe(e)), el('span', null, `${e.sede} · ${e.email}`),
             el('span', { style: { display: 'block' } }, e.talleres.length ? e.talleres.map((t) => t.titulo).join(', ') : 'Sin talleres')),
           el('div', { class: 'btns' },
-            e.acreditadoEn ? el('span', { class: 'chip verde' }, '✓ Acreditado') : el('span', { class: 'chip' }, 'Pendiente'),
-            el('button', { class: 'btn btn-oscuro btn-chico', type: 'button', onclick: () => detalleEstudiante(e.id, cargar) }, 'Ver')))),
+            e.acreditadoEn ? el('span', { class: 'chip ok' }, '✓ Acreditado') : el('span', { class: 'chip' }, 'Pendiente'),
+            el('button', { class: 'btn btn-secundario btn-chico', type: 'button', onclick: () => detalleEstudiante(e.id, cargar) }, 'Ver')))),
         el('div', { class: 'acciones' },
-          desde > 0 && el('button', { class: 'btn btn-linea btn-chico', type: 'button', onclick: () => { desde = Math.max(0, desde - 50); cargar(); } }, '← Anteriores'),
-          desde + 50 < r.total && el('button', { class: 'btn btn-linea btn-chico', type: 'button', onclick: () => { desde += 50; cargar(); } }, 'Siguientes →')));
+          desde > 0 && el('button', { class: 'btn btn-contorno btn-chico', type: 'button', onclick: () => { desde = Math.max(0, desde - 50); cargar(); } }, '← Anteriores'),
+          desde + 50 < r.total && el('button', { class: 'btn btn-contorno btn-chico', type: 'button', onclick: () => { desde += 50; cargar(); } }, 'Siguientes →')));
     } catch (e) {
       toast(e.message, 'error');
     }
@@ -454,7 +455,7 @@ async function vistaEstudiantes() {
       'Al terminar el evento, elimina los datos personales que ya no necesites (principio de retención mínima). Borra inscritos, inscripciones a talleres y sesiones. No se puede deshacer: exporta antes si necesitas un respaldo.'),
     campo('confirmacion', 'Escribe ELIMINAR TODO', { autocomplete: 'off' }),
     campo('clave', 'Tu contraseña', { type: 'password', autocomplete: 'current-password' }),
-    el('button', { class: 'btn btn-rojo', type: 'submit' }, 'Eliminar todos los datos'));
+    el('button', { class: 'btn btn-primario', type: 'submit' }, 'Eliminar todos los datos'));
   alEnviar(purga, async (f) => {
     const r = await llamar('POST', '/api/admin/estudiantes/eliminar-todos', { confirmacion: f.confirmacion.value, clave: f.clave.value });
     f.clave.value = '';
@@ -465,7 +466,7 @@ async function vistaEstudiantes() {
   return [
     el('div', { class: 'barra-acciones' }, el('h1', null, 'Estudiantes'),
       el('div', { class: 'acciones', style: { margin: 0 } },
-        el('a', { class: 'btn btn-linea btn-chico', href: '/api/admin/exportar/estudiantes.csv' }, 'Exportar CSV'))),
+        el('a', { class: 'btn btn-contorno btn-chico', href: '/api/admin/exportar/estudiantes.csv' }, 'Exportar CSV'))),
     el('div', { class: 'filtros-admin' }, q, sede, estado),
     lista,
     purga,
@@ -483,7 +484,7 @@ function formularioUsuario(alGuardar) {
     campo('email', 'Correo', { type: 'email', maxlength: 120, autocomplete: 'off' }),
     el('div', { class: 'campo', 'data-campo': 'rol' }, el('label', { for: 'f-rol' }, 'Rol'), rol, el('span', { class: 'err' })),
     campo('clave', 'Contraseña inicial', { type: 'password', autocomplete: 'new-password', ayuda: 'Mínimo 12 caracteres. Entrégala por un canal seguro y pide que la cambie al ingresar.' }),
-    el('button', { class: 'btn btn-rojo', type: 'submit' }, 'Crear usuario'));
+    el('button', { class: 'btn btn-primario', type: 'submit' }, 'Crear usuario'));
   alEnviar(form, async (f) => {
     await llamar('POST', '/api/admin/usuarios', { nombre: f.nombre.value, email: f.email.value.trim(), rol: f.rol.value, clave: f.clave.value });
     alGuardar();
@@ -505,7 +506,7 @@ async function vistaUsuarios() {
   return [
     el('div', { class: 'barra-acciones' }, el('h1', null, 'Usuarios'),
       el('button', {
-        class: 'btn btn-rojo btn-chico', type: 'button',
+        class: 'btn btn-primario btn-chico', type: 'button',
         onclick: () => { const cerrar = modal('Nuevo usuario', formularioUsuario(() => { cerrar(); toast('Usuario creado'); rec(); })); },
       }, '+ Nuevo usuario')),
     el('p', { class: 'sub', style: { marginBottom: '12px' } },
@@ -517,21 +518,21 @@ async function vistaUsuarios() {
         el('span', { style: { display: 'block' } }, u.ultimo_acceso ? `Último acceso: ${new Date(u.ultimo_acceso).toLocaleString('es-CL')}` : 'Nunca ha ingresado',
           u.bloqueado_hasta && Date.parse(u.bloqueado_hasta) > Date.now() ? ' · Bloqueado temporalmente' : '')),
       el('div', { class: 'btns' },
-        u.activo ? el('span', { class: 'chip verde' }, 'Activo') : el('span', { class: 'chip rojo' }, 'Desactivado'),
+        u.activo ? el('span', { class: 'chip ok' }, 'Activo') : el('span', { class: 'chip peligro' }, 'Desactivado'),
         u.id !== adm.usuario.id && el('button', {
-          class: 'btn btn-linea btn-chico', type: 'button',
+          class: 'btn btn-contorno btn-chico', type: 'button',
           onclick: accion(() => llamar('PUT', `/api/admin/usuarios/${u.id}`, { activo: !u.activo })),
         }, u.activo ? 'Desactivar' : 'Activar'),
         u.id !== adm.usuario.id && el('button', {
-          class: 'btn btn-linea btn-chico', type: 'button',
+          class: 'btn btn-contorno btn-chico', type: 'button',
           onclick: accion(() => llamar('PUT', `/api/admin/usuarios/${u.id}`, { rol: u.rol === 'admin' ? 'acreditador' : 'admin' })),
         }, u.rol === 'admin' ? 'Hacer acreditador' : 'Hacer admin'),
         el('button', {
-          class: 'btn btn-linea btn-chico', type: 'button',
+          class: 'btn btn-contorno btn-chico', type: 'button',
           onclick: () => {
             const form = el('form', { novalidate: true },
               campo('clave', 'Nueva contraseña', { type: 'password', autocomplete: 'new-password', ayuda: 'Se cerrarán todas sus sesiones.' }),
-              el('button', { class: 'btn btn-oscuro', type: 'submit' }, 'Restablecer'));
+              el('button', { class: 'btn btn-secundario', type: 'submit' }, 'Restablecer'));
             const cerrar = modal(`Restablecer contraseña · ${u.nombre}`, form);
             alEnviar(form, async (f) => {
               await llamar('POST', `/api/admin/usuarios/${u.id}/clave`, { clave: f.clave.value });
@@ -541,7 +542,7 @@ async function vistaUsuarios() {
           },
         }, 'Contraseña'),
         u.id !== adm.usuario.id && el('button', {
-          class: 'btn btn-linea btn-chico', type: 'button',
+          class: 'btn btn-contorno btn-chico', type: 'button',
           onclick: accion(async () => {
             if (!confirm(`¿Eliminar la cuenta de ${u.nombre}?`)) return;
             await llamar('DELETE', `/api/admin/usuarios/${u.id}`);
@@ -620,7 +621,7 @@ async function iniciar() {
     vista.replaceChildren(el('div', { class: 'card', style: { maxWidth: '480px', margin: '24px auto' } },
       el('h1', null, 'Sin permisos'),
       el('p', { class: 'sub' }, 'Tu cuenta es de acreditador.'),
-      el('div', { class: 'acciones' }, el('a', { class: 'btn btn-rojo', href: '/acreditacion' }, 'Ir a acreditación'))));
+      el('div', { class: 'acciones' }, el('a', { class: 'btn btn-primario', href: '/acreditacion' }, 'Ir a acreditación'))));
     return;
   }
   adm.sedes = (await api('GET', '/api/evento').catch(() => ({}))).sedes || [];
