@@ -1,0 +1,16 @@
+{
+  "name": "evento-ciberseguridad-inacap",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gestión de evento: registro de estudiantes, acreditación con QR desde el teléfono, talleres con cupos en tiempo real y agenda.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/*.test.js\""
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "license": "UNLICENSED"
+}
