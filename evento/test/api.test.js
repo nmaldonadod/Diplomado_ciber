@@ -205,6 +205,14 @@ test('seguridad: CSRF, cabeceras, archivos, bloqueo de cuentas y límites', asyn
   assert.equal(r.headers.get('x-frame-options'), 'DENY');
   for (const p of ['/admin', '/acreditacion', '/privacidad']) assert.equal((await c('GET', p)).status, 200);
 
+  // Video de portada: caché larga y rangos de bytes (requeridos por Safari en iPhone).
+  r = await fetch(srv.base + '/video/inacapito-360.mp4', { headers: { Range: 'bytes=0-1' } });
+  assert.equal(r.status, 206);
+  assert.equal(r.headers.get('content-type'), 'video/mp4');
+  assert.match(r.headers.get('content-range'), /^bytes 0-1\/\d+$/);
+  assert.match(r.headers.get('cache-control'), /max-age=86400/);
+  assert.equal((await r.arrayBuffer()).byteLength, 2);
+
   r = await admin('POST', '/api/admin/talleres', { titulo: 'X', inicio: '2026-11-12T10:00', fin: '2026-11-12T11:00', cupos: 3, publicado: true }, { Origin: 'https://evil.example' });
   assert.equal(r.status, 403, 'origen cruzado bloqueado');
   r = await admin('POST', '/api/admin/talleres', { titulo: 'X', inicio: '2026-11-12T10:00', fin: '2026-11-12T11:00', cupos: 3, publicado: true }, { 'Sec-Fetch-Site': 'cross-site' });

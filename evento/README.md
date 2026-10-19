@@ -145,7 +145,8 @@ Diseñada considerando la Ley N.° 19.628 (y su actualización por la Ley N.° 2
 - Validación estricta en el servidor; consultas SQL parametrizadas; transacciones atómicas.
 - CSRF (verificación de `Origin`/`Sec-Fetch-Site` + JSON obligatorio); WebSocket sólo desde el mismo origen.
 - Cabeceras: CSP estricta (`script-src 'self'`), `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, COOP/CORP.
-- Fuentes e imágenes alojadas en la propia app (ninguna petición a terceros).
+- Fuentes, imágenes y el video de portada alojados en la propia app (ninguna petición a terceros). El video no tiene
+  sonido, pesa ~0,8 MB en teléfonos, se pausa fuera de pantalla y no se carga con «reducir movimiento» ni «ahorro de datos».
 - Fotos: el navegador las recorta y convierte a JPEG; el servidor acepta sólo JPEG válidos ≤ 2 MB, **elimina metadatos** (EXIF/GPS) y usa nombres aleatorios.
 - Límites de tamaño e intentos por IP real del cliente (`CF-Connecting-IP`); errores sin detalles internos.
 - **Auditoría** de ingresos, intentos fallidos, accesos denegados, cambios, acreditaciones, exportaciones y eliminaciones.

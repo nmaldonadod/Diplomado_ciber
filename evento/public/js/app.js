@@ -92,6 +92,51 @@ function vistaNoConfigurado() {
     el('p', { class: 'sub' }, 'El evento aún no ha sido publicado. Vuelve pronto.'));
 }
 
+// ---------- video de fondo de la portada ----------
+// Sutil y sin sonido. Se elige el archivo según el ancho de pantalla (360p en teléfonos: ~0,8 MB) y no se carga si el
+// usuario pidió menos movimiento, ahorro de datos o tiene una conexión lenta. Se pausa fuera de pantalla para cuidar
+// la batería. Un único elemento se reutiliza entre vistas para no volver a descargarlo ni reiniciarlo.
+let videoPortada = null; // null: aún no se crea · false: no se pudo reproducir
+let observadorVideo = null;
+
+function videoFondo() {
+  const red = navigator.connection;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || red?.saveData || /(^|-)2g$/.test(red?.effectiveType || '')) return null;
+  if (videoPortada === null) {
+    const v = document.createElement('video');
+    v.className = 'video-fondo';
+    v.muted = v.defaultMuted = true; // iOS sólo permite reproducción automática sin sonido
+    v.loop = v.autoplay = v.playsInline = true;
+    v.disablePictureInPicture = true;
+    v.disableRemotePlayback = true;
+    v.preload = 'auto';
+    v.setAttribute('playsinline', '');
+    v.setAttribute('aria-hidden', 'true');
+    v.tabIndex = -1;
+    v.poster = '/video/inacapito.webp';
+    // H.264 (decodificación por hardware en todos los teléfonos); VP9 sólo si el navegador no trae H.264.
+    const formato = v.canPlayType('video/mp4; codecs="avc1.4D401E"') ? 'mp4' : 'webm';
+    v.src = `/video/inacapito-${matchMedia('(min-width: 761px)').matches ? 720 : 360}.${formato}`;
+    v.addEventListener('playing', () => v.classList.add('visible'), { once: true });
+    // Si el video no se puede reproducir queda la imagen del campus de siempre.
+    v.addEventListener('error', () => { v.remove(); videoPortada = false; }, { once: true });
+    document.addEventListener('visibilitychange', () => (document.hidden ? v.pause() : reproducirVideo()));
+    videoPortada = v;
+  }
+  if (!videoPortada) return null;
+  observadorVideo?.disconnect();
+  if ('IntersectionObserver' in window) {
+    observadorVideo = new IntersectionObserver(([e]) => (e.isIntersecting ? reproducirVideo() : videoPortada.pause()));
+    queueMicrotask(() => videoPortada?.isConnected && observadorVideo.observe(videoPortada));
+  }
+  queueMicrotask(reproducirVideo);
+  return videoPortada;
+}
+
+function reproducirVideo() {
+  if (videoPortada?.isConnected && !document.hidden) videoPortada.play().catch(() => {});
+}
+
 function vistaInicio() {
   const e = ev();
   const acciones = estado.yo
@@ -123,7 +168,8 @@ function vistaInicio() {
             unDia && fecha.toLocaleDateString('es-CL', { weekday: 'long' }), unDia && horarioEvento() && ' · ', horarioEvento(),
             e.lugar && el('div', null, el('strong', null, e.lugar)))),
         el('div', { class: 'acciones' }, acciones)),
-      el('div', { class: 'campus', role: 'img', 'aria-label': 'Campus INACAP de noche' })),
+      el('div', { class: 'campus', role: 'img', 'aria-label': 'Campus INACAP de noche' }),
+      videoFondo()),
 
     estado.yo && el('div', { class: 'aviso ok' }, `Hola ${estado.yo.nombres.split(' ')[0]}, ya estás inscrito. `,
       estado.yo.talleres.length ? `Tienes ${estado.yo.talleres.length} taller(es).` : 'Aún no eliges talleres.'),

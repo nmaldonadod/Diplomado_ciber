@@ -6,6 +6,7 @@ import { crearDB } from '../src/db.js';
 import * as seg from '../src/seguridad.js';
 import * as v from '../src/validacion.js';
 import { almacenamientoFalso } from './apoyo.js';
+import { rangoPedido } from '../src/http.js';
 
 const claveB64 = Buffer.from(globalThis.crypto.getRandomValues(new Uint8Array(32))).toString('base64');
 
@@ -156,4 +157,13 @@ test('DB: transacciones atómicas y sesiones con expiración por inactividad', (
   assert.equal(db.sesiones.usuario('hash-token', { admin: 60, acreditador: 180 }).rol, 'admin');
   almacen.db.prepare('UPDATE sesiones_usuarios SET ultimo_uso = ?').run(new Date(Date.now() - 61 * 60_000).toISOString());
   assert.equal(db.sesiones.usuario('hash-token', { admin: 60, acreditador: 180 }), null);
+});
+
+test('rangos de bytes para el video', () => {
+  assert.equal(rangoPedido(null, 100), null);
+  assert.deepEqual(rangoPedido('bytes=0-1', 100), [0, 1]);
+  assert.deepEqual(rangoPedido('bytes=90-', 100), [90, 99]);
+  assert.deepEqual(rangoPedido('bytes=-10', 100), [90, 99]);
+  assert.deepEqual(rangoPedido('bytes=50-500', 100), [50, 99]);
+  for (const malo of ['bytes=100-', 'bytes=5-2', 'bytes=-', 'bytes=0-1,5-6', 'items=0-1']) assert.equal(rangoPedido(malo, 100), false, malo);
 });

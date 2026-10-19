@@ -141,3 +141,20 @@ export function crearRouter() {
     },
   };
 }
+
+// Rango «bytes=a-b» de una petición (Safari en iPhone sólo reproduce video si el servidor los acepta).
+// Devuelve null si no hay rango, false si es inválido o múltiple, o [inicio, fin] inclusivo.
+export function rangoPedido(cabecera, total) {
+  if (!cabecera) return null;
+  const m = /^bytes=(\d*)-(\d*)$/.exec(cabecera.trim());
+  if (!m || (m[1] === '' && m[2] === '')) return false;
+  let inicio, fin;
+  if (m[1] === '') { // sufijo: los últimos N bytes
+    inicio = Math.max(0, total - Number(m[2]));
+    fin = total - 1;
+  } else {
+    inicio = Number(m[1]);
+    fin = m[2] === '' ? total - 1 : Math.min(Number(m[2]), total - 1);
+  }
+  return inicio <= fin && inicio < total ? [inicio, fin] : false;
+}

@@ -179,7 +179,18 @@ main { padding-block: 26px 48px }
 .fecha-evento .donde strong { color: var(--texto) }
 .hero .acciones { margin-top: 20px }
 .hero .campus { position: relative; height: clamp(120px, 26vw, 230px); background: url('/img/campus-noche.webp') center 60% / cover no-repeat; margin-top: -10px }
-.hero .campus::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(3, 8, 36, .95), rgba(3, 8, 36, 0) 45%) }
+/* El campus se funde hacia arriba con el video (o con el fondo si no hay video). */
+.hero .campus { -webkit-mask-image: linear-gradient(180deg, transparent, #000 55%); mask-image: linear-gradient(180deg, transparent, #000 55%) }
+.hero .campus { z-index: 1 }
+/* Video de fondo (INACAPITO): muy tenue, aparece suave cuando ya está reproduciéndose y se funde con el campus. */
+.hero .video-fondo {
+  position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 40%;
+  opacity: 0; transition: opacity 1.6s ease; pointer-events: none; filter: saturate(.85);
+  -webkit-mask-image: linear-gradient(180deg, #000 60%, transparent 92%); mask-image: linear-gradient(180deg, #000 60%, transparent 92%)
+}
+.hero .video-fondo.visible { opacity: .28 }
+@media (min-width: 761px) { .hero .video-fondo.visible { opacity: .22 } }
+@media (prefers-reduced-motion: reduce) { .hero .video-fondo { display: none } }
 .hero .campus::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--cian); box-shadow: var(--halo-cian) }
 .cuenta { display: inline-flex; align-items: center; gap: 8px; font-family: var(--f-ui); font-weight: 700; font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; padding: 6px 12px; border-radius: 99px; background: var(--cian-suave); color: var(--cian); box-shadow: 0 0 0 1px var(--linea-fuerte) }
 

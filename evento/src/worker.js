@@ -1,12 +1,12 @@
 // Punto de entrada del Worker: sirve el frontend, las fotos de docentes y deriva la API al Durable Object.
 // Todas las respuestas salen con cabeceras de seguridad.
-import { aplicarCabecerasSeguridad } from './http.js';
+import { aplicarCabecerasSeguridad, rangoPedido } from './http.js';
 
 export { EventoDO } from './evento.js';
 
 const PAGINAS = { '/': '/index.html', '/acreditacion': '/acreditacion.html', '/admin': '/admin.html', '/privacidad': '/privacidad.html' };
 // Sólo se publican recursos de carpetas conocidas con nombres simples.
-const RECURSO = /^\/(css|js|vendor|img|fuentes)\/[\w.-]+$|^\/[\w-]+\.(webmanifest|svg)$/;
+const RECURSO = /^\/(css|js|vendor|img|fuentes|video)\/[\w.-]+$|^\/[\w-]+\.(webmanifest|svg)$/;
 const FOTO = /^\/fotos\/([a-f0-9]{32}\.jpg)$/;
 
 function noEncontrado() {
@@ -21,11 +21,36 @@ async function estatico(request, env, url) {
   if (!ruta) return noEncontrado();
   const res = await env.ASSETS.fetch(new Request(new URL(ruta, url), request));
   if (!res.ok && res.status !== 304) return noEncontrado();
-  const salida = new Response(res.body, res);
+  const salida = res.status === 200 && ruta.startsWith('/video/') ? await conRango(request, res) : new Response(res.body, res);
   // HTML, CSS y JS se revalidan siempre (ETag) para que un despliegue llegue de inmediato a todos.
-  const largo = /^\/(fuentes|img)\//.test(ruta) || ruta.endsWith('.svg') ? 'public, max-age=86400' : 'no-cache';
+  const largo = /^\/(fuentes|img|video)\//.test(ruta) || ruta.endsWith('.svg') ? 'public, max-age=86400' : 'no-cache';
   salida.headers.set('Cache-Control', largo);
   return salida;
+}
+
+// Safari en iPhone pide el video por rangos de bytes y no lo reproduce sin respuestas 206. Si el servidor de archivos
+// no las da (entorno local), se recorta aquí.
+async function conRango(request, res) {
+  const ifRange = request.headers.get('If-Range');
+  const etag = res.headers.get('ETag');
+  if (request.method === 'HEAD' || !request.headers.has('Range') || (ifRange && ifRange !== etag)) {
+    const r = new Response(res.body, res);
+    r.headers.set('Accept-Ranges', 'bytes');
+    return r;
+  }
+  const datos = new Uint8Array(await res.arrayBuffer());
+  const rango = rangoPedido(request.headers.get('Range'), datos.length);
+  const headers = new Headers(res.headers);
+  headers.set('Accept-Ranges', 'bytes');
+  if (!rango) {
+    headers.set('Content-Range', `bytes */${datos.length}`);
+    headers.delete('Content-Length');
+    return new Response(null, { status: 416, headers });
+  }
+  const [inicio, fin] = rango;
+  headers.set('Content-Range', `bytes ${inicio}-${fin}/${datos.length}`);
+  headers.set('Content-Length', String(fin - inicio + 1));
+  return new Response(datos.subarray(inicio, fin + 1), { status: 206, headers });
 }
 
 async function foto(request, env, nombre) {
