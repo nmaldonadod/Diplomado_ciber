@@ -295,7 +295,7 @@ export class EventoDO {
     const c = contexto(req);
     try {
       if (c.url.pathname === '/api/tiempo-real') return this.conectarTiempoReal(c);
-      this.limitar('api:' + c.ip, 900, 60_000);
+      this.limitar('api:' + c.ip, 2500, 60_000);
       const lectura = req.method === 'GET' || req.method === 'HEAD';
       if (!lectura && !mismoOrigen(c)) throw fallo('ORIGEN', 'Origen no permitido.', 403);
       if (Date.now() - this.ultimaPurga > 10 * 60_000) {
@@ -346,7 +346,7 @@ export class EventoDO {
 
     // ----- estudiantes -----
     R('POST', '/api/registro', async (c) => {
-      this.limitar('registro:' + c.ip, 60, 10 * 60_000);
+      this.limitar('registro:' + c.ip, 250, 10 * 60_000);
       const ev = db().evento.get();
       if (!ev?.inscripciones_abiertas) throw fallo('INSCRIPCIONES_CERRADAS', 'Las inscripciones al evento están cerradas.');
       const b = await leerJSON(c.req);
@@ -375,7 +375,7 @@ export class EventoDO {
 
     // Recuperar la entrada en otro dispositivo: RUT + INACAPMAIL + sede deben coincidir con la inscripción.
     R('POST', '/api/recuperar', async (c) => {
-      this.limitar('recuperar:' + c.ip, 20, 10 * 60_000);
+      this.limitar('recuperar:' + c.ip, 80, 10 * 60_000);
       const b = await leerJSON(c.req);
       const rut = normalizarRut(b.rut);
       if (!rut) throw errValidacion({ rut: 'RUT inválido. Revisa el dígito verificador.' });
