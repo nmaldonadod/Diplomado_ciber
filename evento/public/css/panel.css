@@ -79,7 +79,7 @@
 .foto-taller img, .foto-taller .vacia { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; background: var(--panel-2); display: flex; align-items: center; justify-content: center; color: var(--texto-3); font-size: .75rem; text-align: center; box-shadow: 0 0 0 2px var(--noche), 0 0 0 3.5px var(--cian) }
 .miniatura { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; background: var(--panel-2); flex: 0 0 auto; box-shadow: 0 0 0 1.5px var(--linea-fuerte) }
 .filtros-admin { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 12px }
-@media (min-width: 761px) { .filtros-admin { grid-template-columns: 2fr 1fr 1fr } }
+@media (min-width: 761px) { .filtros-admin { grid-template-columns: 2fr 1fr 1fr 1fr } }
 .filtros-admin input, .filtros-admin select { padding: 11px 14px; border: 1.5px solid var(--linea); border-radius: var(--radio-chico); font-size: .95rem; width: 100%; background: rgba(3, 8, 36, .55); color: var(--texto) }
 .filtros-admin select option { background: var(--panel-solido) }
 .modal-fondo { position: fixed; inset: 0; background: rgba(1, 4, 20, .72); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 40; display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: max(24px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 24px max(12px, env(safe-area-inset-left, 0px)) }

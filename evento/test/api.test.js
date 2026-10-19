@@ -94,6 +94,14 @@ test('flujo completo: admin configura → estudiante se inscribe con taller → 
   r = await beto('POST', `/api/talleres/${tallerId}/inscripcion`, {});
   assert.equal(r.body.error, 'SIN_CUPOS');
 
+  // Docentes y administrativos se inscriben con su correo @inacap.cl.
+  const profe = cliente(srv.base);
+  r = await profe('POST', '/api/registro', { ...ESTUDIANTE, tipo: 'docente', nombres: 'Rosa', rut: '7.654.321-6', email: 'rosa@inacapmail.cl' });
+  assert.ok(r.body.errores?.email, 'un docente debe usar @inacap.cl');
+  r = await profe('POST', '/api/registro', { ...ESTUDIANTE, tipo: 'docente', nombres: 'Rosa', rut: '7.654.321-6', email: 'rosa@inacap.cl' });
+  assert.equal(r.status, 201);
+  assert.equal(r.body.perfil.tipo, 'docente');
+
   // Recuperar la entrada desde otro dispositivo con RUT + correo + sede.
   const otroDispositivo = cliente(srv.base);
   r = await otroDispositivo('POST', '/api/recuperar', { rut: '12.345.678-5', email: ESTUDIANTE.email, sede: 'Talca' });
@@ -150,7 +158,7 @@ test('flujo completo: admin configura → estudiante se inscribe con taller → 
   assert.deepEqual(r.body.map((e) => e.nombres), ['Beto'], 'busca por RUT exacto');
 
   r = await acr('GET', '/api/acreditacion/buscar?q=perez');
-  assert.equal(r.body.length, 3);
+  assert.equal(r.body.length, 4, "Ana, Beto, Carla y la docente Rosa");
 
   // Admin ve los datos completos, exporta y todo queda auditado.
   r = await admin('GET', '/api/admin/estudiantes?q=ana');
@@ -181,7 +189,7 @@ test('flujo completo: admin configura → estudiante se inscribe con taller → 
   r = await admin('POST', '/api/admin/estudiantes/eliminar-todos', { confirmacion: 'ELIMINAR TODO', clave: 'mala' });
   assert.equal(r.status, 401);
   r = await admin('POST', '/api/admin/estudiantes/eliminar-todos', { confirmacion: 'ELIMINAR TODO', clave: CLAVE_ADMIN });
-  assert.equal(r.body.eliminados, 3);
+  assert.equal(r.body.eliminados, 4);
   r = await ana('GET', '/api/yo');
   assert.equal(r.body, null, 'las sesiones de estudiantes eliminados dejan de funcionar');
 });
@@ -262,7 +270,8 @@ test('carga inicial del Mes de la Ciberseguridad e importación desde archivo', 
   let r = await anon('GET', '/api/evento');
   assert.equal(r.body.evento.nombre, 'Mes de la Ciberseguridad');
   assert.equal(r.body.agenda.length, 7);
-  assert.deepEqual(r.body.talleres.map((x) => x.sala).sort(), ['Lab 404', 'Sala 101'], 'sólo los talleres publicados');
+  assert.deepEqual(r.body.talleres.map((x) => x.sala).sort(), ['Lab 404', 'Lab 409', 'Sala 101'], 'sólo los talleres publicados');
+  assert.equal(r.body.talleres.find((x) => x.sala === 'Lab 409').nivel, 'Intermedio');
 
   const admin = cliente(srv.base);
   await admin('POST', '/api/staff/configuracion-inicial', { token: TOKEN, nombre: 'Admin', email: 'admin@inacap.cl', clave: CLAVE_ADMIN });
@@ -274,14 +283,18 @@ test('carga inicial del Mes de la Ciberseguridad e importación desde archivo', 
   const archivo = {
     evento: { nombre: 'Mes de la Ciberseguridad', lema: 'Modo Seguro', fecha_inicio: '2026-10-21', fecha_fin: '2026-10-21', max_talleres: 1, inscripciones_abiertas: 1, talleres_abiertos: 1 },
     agenda: [{ tipo: 'charla', titulo: 'Cierre', inicio: '2026-10-21T17:30', fin: '2026-10-21T17:40' }],
-    talleres: [{ titulo: 'Taller nuevo en Lab 409', docente: 'Docente', sala: 'Lab 409', inicio: '2026-10-21T16:10', fin: '2026-10-21T17:30', cupos: 25, publicado: true }],
+    talleres: [
+      { titulo: 'Taller nuevo en Lab 409', docente: 'Docente', nivel: 'Avanzado', sala: 'Lab 409', inicio: '2026-10-21T16:10', fin: '2026-10-21T17:30', cupos: 25, publicado: true },
+      { titulo: 'Taller en la biblioteca', docente: 'Felipe León', sala: 'CREA Empresa (Biblioteca) ampliada', inicio: '2026-10-21T16:10', fin: '2026-10-21T17:30', cupos: 30, publicado: false },
+    ],
   };
   r = await admin('POST', '/api/admin/importar', { datos: archivo });
-  assert.deepEqual(r.body, { creados: 0, actualizados: 1, actividades: 1 });
+  assert.deepEqual(r.body, { creados: 0, actualizados: 2, actividades: 1 }, 'reconoce también la sala con más detalle');
   r = await admin('GET', '/api/admin/talleres');
   const actualizado = r.body.find((x) => x.sala === 'Lab 409');
   assert.equal(actualizado.id, lab409.id, 'reconoce el taller por sala y día');
   assert.equal(actualizado.titulo, 'Taller nuevo en Lab 409');
+  assert.equal(actualizado.nivel, 'Avanzado');
 });
 
 test('servidor Node: la IP del cliente no se puede falsificar para evadir límites', { skip: process.env.RUNTIME !== 'node' }, async (t) => {

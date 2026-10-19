@@ -63,7 +63,7 @@
       "inicio": "2026-10-21T16:10",
       "fin": "2026-10-21T17:30",
       "titulo": "Talleres simultáneos",
-      "descripcion": "Lab 404 · Lab 409 · CREA Empresa · Sala 101",
+      "descripcion": "Sala 101 · Lab 404 · Lab 409 · CREA Empresa (Biblioteca)",
       "expositor": "",
       "lugar": ""
     },
@@ -86,7 +86,8 @@
       "inicio": "2026-10-21T16:10",
       "fin": "2026-10-21T17:25",
       "cupos": 45,
-      "publicado": true
+      "publicado": true,
+      "nivel": "Básico"
     },
     {
       "titulo": "Taller de análisis de malware",
@@ -96,27 +97,30 @@
       "inicio": "2026-10-21T16:10",
       "fin": "2026-10-21T17:30",
       "cupos": 30,
-      "publicado": true
+      "publicado": true,
+      "nivel": "Intermedio"
     },
     {
-      "titulo": "Taller · Lab 409",
-      "descripcion": "",
-      "docente": "",
+      "titulo": "Taller de Análisis Forense Digital: Metadatos y Detección de Información Oculta mediante Esteganografía",
+      "descripcion": "En este taller, los estudiantes aplicarán técnicas básicas de análisis forense digital para examinar archivos, identificar metadatos y detectar información oculta mediante técnicas de esteganografía.\n\nA través de actividades prácticas, utilizarán herramientas y sitios web especializados para analizar imágenes y documentos digitales, identificar información relevante, detectar posibles alteraciones y descubrir datos ocultos.\n\nEl taller permitirá comprender la importancia de estas técnicas en una investigación forense, considerando la integridad de la evidencia digital, la cadena de custodia y la documentación de los hallazgos.",
+      "docente": "René Guerrero, Magíster en Ciberseguridad y Académico Universitario, Docente INACAP",
       "sala": "Lab 409",
       "inicio": "2026-10-21T16:10",
       "fin": "2026-10-21T17:30",
       "cupos": 30,
-      "publicado": false
+      "publicado": true,
+      "nivel": "Intermedio"
     },
     {
       "titulo": "Taller · CREA Empresa",
       "descripcion": "",
-      "docente": "",
-      "sala": "CREA Empresa",
+      "docente": "Felipe León",
+      "sala": "CREA Empresa (Biblioteca)",
       "inicio": "2026-10-21T16:10",
       "fin": "2026-10-21T17:30",
       "cupos": 30,
-      "publicado": false
+      "publicado": false,
+      "nivel": "Avanzado"
     }
   ]
 }

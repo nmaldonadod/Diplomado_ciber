@@ -58,7 +58,8 @@ function horaReal(isoUtc) {
   return new Date(isoUtc).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
 }
 
-const RE_INACAPMAIL = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?@inacapmail\.cl$/i;
+// Correo institucional INACAP: @inacapmail.cl (estudiantes) o @inacap.cl (docentes y administrativos).
+const RE_INACAPMAIL = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?@inacap(?:mail)?\.cl$/i;
 const correoValido = (v) => RE_INACAPMAIL.test(String(v).trim()) && !String(v).includes('..');
 // Formatea un RUT a medida que se escribe: 12.345.678-5
 function formatearRutInput(valor) {

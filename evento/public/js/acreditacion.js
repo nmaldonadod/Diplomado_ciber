@@ -119,6 +119,7 @@ function cerrarResultado() {
   camara.pausado = false;
 }
 
+const ETIQUETA_TIPO = { estudiante: 'Estudiante', docente: 'Docente', administrativo: 'Administrativo' };
 const nombreDe = (e) => `${e.nombres} ${e.apellidos}`;
 
 function mostrarResultado(r) {
@@ -150,7 +151,7 @@ function mostrarResultado(r) {
 
   panelResultado = el('div', { class: `resultado ${clase}`, role: 'alert' },
     el('div', { class: 'grande' }, titulo),
-    e && el('div', { class: 'nombre' }, nombreDe(e)),
+    e && el('div', { class: 'nombre' }, nombreDe(e), e.tipo && e.tipo !== 'estudiante' && ` · ${ETIQUETA_TIPO[e.tipo]}`),
     e && el('div', { class: 'mini' }, [e.rut, e.sede, e.email].filter(Boolean).join(' · ')),
     r.resultado === 'NO_REGISTRADO' && el('div', { class: 'mini' }, r.rut ? `RUT ${r.rut}` : r.email ? `Correo ${r.email}` : 'La entrada no corresponde a ningún inscrito.'),
     r.resultado === 'NO_RECONOCIDO' && el('div', { class: 'mini' }, 'Escanea el QR de la entrada o de la cédula, o busca al estudiante por nombre o RUT.'),
@@ -215,7 +216,7 @@ function vistaEscanear() {
 function filaEstudiante(e, alCambiar) {
   return el('div', { class: 'fila' },
     el('div', { class: 'q' },
-      el('strong', null, nombreDe(e)),
+      el('strong', null, nombreDe(e), e.tipo && e.tipo !== 'estudiante' && el('span', { class: 'chip', style: { marginLeft: '6px' } }, ETIQUETA_TIPO[e.tipo])),
       el('span', null, [e.rut, e.sede, e.email].filter(Boolean).join(' · ')),
       el('span', { style: { display: 'block' } }, e.talleres.length ? `Talleres: ${e.talleres.map((t) => t.titulo).join(', ')}` : 'Sin talleres')),
     e.acreditadoEn
@@ -270,22 +271,25 @@ function vistaInscribir({ email = '', rut = '' } = {}) {
     el('h2', null, 'Inscripción presencial'),
     el('p', { class: 'sub', style: { marginBottom: '12px' } }, 'El estudiante quedará inscrito y acreditado de inmediato.'),
     aviso,
+    campo('tipo', 'Tipo de participante', { opciones: Object.values(ETIQUETA_TIPO) }),
     campo('nombres', 'Nombres', { maxlength: 60 }),
     campo('apellidos', 'Apellidos', { maxlength: 60 }),
     campo('rut', 'RUT', { value: rut || '', maxlength: 12, autocomplete: 'off', placeholder: '12.345.678-5' }),
-    campo('email', 'INACAPMAIL', { type: 'email', value: email || '', maxlength: 120 }),
+    campo('email', 'Correo institucional', { type: 'email', value: email || '', maxlength: 120, ayuda: 'Estudiantes: @inacapmail.cl · Docentes y administrativos: @inacap.cl' }),
     campo('telefono', 'Teléfono', { type: 'tel', maxlength: 16 }),
     campo('sede', 'Sede', { opciones: st.sedes }),
     el('label', { class: 'check', 'data-campo': 'consentimiento' },
       el('input', { type: 'checkbox', name: 'consentimiento' }),
       el('span', null, 'El estudiante leyó y aceptó la política de privacidad del evento.', el('span', { class: 'err', style: { display: 'block' } }))),
     el('button', { class: 'btn btn-exito btn-bloque', type: 'submit' }, 'Inscribir y acreditar'));
+  form.elements.tipo.value = 'Estudiante';
   form.elements.rut.addEventListener('input', (x) => (x.target.value = formatearRutInput(x.target.value)));
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const f = form.elements;
     try {
       const r = await api('POST', '/api/acreditacion/registro-presencial', {
+        tipo: Object.keys(ETIQUETA_TIPO).find((k) => ETIQUETA_TIPO[k] === f.tipo.value) || 'estudiante',
         nombres: f.nombres.value, apellidos: f.apellidos.value, rut: f.rut.value, sede: f.sede.value, email: f.email.value.trim(),
         telefono: f.telefono.value, consentimiento: f.consentimiento.checked,
       });

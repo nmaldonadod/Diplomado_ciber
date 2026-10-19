@@ -2,6 +2,9 @@ import { normalizarRut } from './rut.js';
 
 const SEDES = ['Santiago Centro', 'Santiago Sur', 'Rancagua', 'Talca', 'Curicó', 'Apoquindo', 'Valparaíso'];
 const DOMINIO_CORREO = 'inacapmail.cl';
+// Tipo de participante y el dominio de correo institucional que le corresponde.
+const TIPOS_PARTICIPANTE = { estudiante: 'inacapmail.cl', docente: 'inacap.cl', administrativo: 'inacap.cl' };
+const NIVELES = ['Básico', 'Intermedio', 'Avanzado'];
 const TIPOS_AGENDA = ['charla', 'pausa', 'acreditacion', 'actividad'];
 const ROLES = ['admin', 'acreditador'];
 
@@ -33,10 +36,12 @@ function fechaValida(v) {
   return RE_FECHA.test(v) && fechaHoraValida(v + 'T00:00');
 }
 
-function correoInstitucional(valor) {
+// Correo institucional INACAP. Sin `dominio`, acepta cualquiera de los dos (@inacapmail.cl o @inacap.cl).
+function correoInstitucional(valor, dominio = null) {
   const email = linea(valor, 120).toLowerCase();
-  const re = new RegExp(`^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?@${DOMINIO_CORREO.replace('.', '\\.')}$`);
-  return re.test(email) && !email.includes('..') ? email : null;
+  const dominios = dominio ? [dominio] : [...new Set(Object.values(TIPOS_PARTICIPANTE))];
+  const ok = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?@[a-z.]+$/.test(email) && !email.includes('..') && dominios.includes(email.split('@')[1]);
+  return ok ? email : null;
 }
 
 // Acepta 9 1234 5678, +56 9 1234 5678, 912345678, 221234567 (fijo) → +56XXXXXXXXX
@@ -56,11 +61,12 @@ function validarRegistro(b) {
   if (!rut) errores.rut = 'RUT inválido. Revisa el dígito verificador.';
   const sede = SEDES.includes(b.sede) ? b.sede : null;
   if (!sede) errores.sede = 'Selecciona tu sede.';
-  const email = correoInstitucional(b.email);
-  if (!email) errores.email = `Usa tu correo institucional @${DOMINIO_CORREO}.`;
+  const tipo = Object.hasOwn(TIPOS_PARTICIPANTE, b.tipo) ? b.tipo : 'estudiante';
+  const email = correoInstitucional(b.email, TIPOS_PARTICIPANTE[tipo]);
+  if (!email) errores.email = `Usa tu correo institucional @${TIPOS_PARTICIPANTE[tipo]}.`;
   const telefono = telefonoChile(b.telefono);
   if (!telefono) errores.telefono = 'Ingresa un teléfono válido (ej: 9 1234 5678).';
-  return { errores, datos: { nombres, apellidos, rut, sede, email, telefono } };
+  return { errores, datos: { tipo, nombres, apellidos, rut, sede, email, telefono } };
 }
 
 function validarTaller(b) {
@@ -68,7 +74,8 @@ function validarTaller(b) {
   const d = {
     titulo: linea(b.titulo, 120),
     descripcion: parrafo(b.descripcion, 1500),
-    docente: linea(b.docente, 100),
+    docente: linea(b.docente, 160),
+    nivel: NIVELES.includes(b.nivel) ? b.nivel : '',
     sala: linea(b.sala, 80),
     inicio: String(b.inicio || ''),
     fin: String(b.fin || ''),
@@ -151,7 +158,7 @@ function validarUsuario(b, { exigirClave }) {
 const hayErrores = (e) => Object.keys(e).length > 0;
 
 export {
-  SEDES, DOMINIO_CORREO, TIPOS_AGENDA, ROLES,
+  SEDES, DOMINIO_CORREO, TIPOS_PARTICIPANTE, NIVELES, TIPOS_AGENDA, ROLES,
   linea, parrafo, fechaHoraValida, correoInstitucional, telefonoChile,
   validarRegistro, validarTaller, validarAgenda, validarEvento, validarClave, validarUsuario, hayErrores,
 };

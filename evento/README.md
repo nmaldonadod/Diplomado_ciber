@@ -10,8 +10,9 @@ Tiene **tres interfaces**, cada una con sus propios permisos:
 | **Acreditador** | `/acreditacion` | Cuentas con rol *acreditador* (o *admin*) | Escanea el QR de la entrada con la cámara del teléfono, busca estudiantes e inscribe presencialmente |
 | **Administrador** | `/admin` | Cuentas con rol *admin* | Configura el evento, crea talleres (título, descripción, cupos, horario, sala, **foto del docente**), arma la agenda, importa cambios desde un archivo, gestiona estudiantes y cuentas, exporta y revisa la auditoría |
 
-Datos que se piden al estudiante, en este orden: nombres · apellidos · RUT (con dígito verificador) · teléfono ·
-INACAPMAIL (sólo `@inacapmail.cl`) · sede (Santiago Centro, Santiago Sur, Rancagua, Talca, Curicó, Apoquindo, Valparaíso).
+Primero se indica si es **estudiante, docente o administrativo** (a docentes y administrativos no se les ofrecen talleres
+al inscribirse, pero pueden verlos después). Luego: nombres · apellidos · RUT (con dígito verificador) · teléfono ·
+correo institucional (`@inacapmail.cl` estudiantes, `@inacap.cl` docentes y administrativos) · sede (Santiago Centro, Santiago Sur, Rancagua, Talca, Curicó, Apoquindo, Valparaíso).
 Luego un **resumen para revisar y confirmar**, con la aceptación de la política de privacidad. Si cambia de teléfono,
 el estudiante **recupera su entrada con RUT + INACAPMAIL + sede**. En la acreditación se lee el QR de la entrada o el
 **QR de la cédula de identidad**.

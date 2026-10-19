@@ -403,3 +403,24 @@ legend { font-family: var(--f-ui); font-weight: 700; margin-bottom: 4px }
 .cuadro .anillo .cifra strong { font-size: .85rem }
 .cuadro .anillo .cifra span { font-size: .5rem }
 @media (max-width: 380px) { .cuadro { aspect-ratio: auto; min-height: 170px } }
+
+/* Tipo de participante */
+.campo .etiqueta { font-family: var(--f-ui); font-weight: 600; font-size: .9rem; letter-spacing: .03em }
+.selector-tipo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 5px; border-radius: 14px; background: rgba(3, 8, 36, .55); box-shadow: inset 0 0 0 1px var(--linea) }
+.selector-tipo label { position: relative; cursor: pointer; min-width: 0 }
+.selector-tipo input { position: absolute; opacity: 0; inset: 0; cursor: pointer }
+.selector-tipo span { display: block; text-align: center; padding: 10px 6px; border-radius: 10px; font-family: var(--f-ui); font-weight: 700; font-size: .92rem; color: var(--texto-2); transition: .15s; overflow-wrap: anywhere }
+.selector-tipo input:checked + span { background: var(--cian); color: var(--noche); box-shadow: var(--halo-cian) }
+.selector-tipo input:focus-visible + span { outline: 2px solid var(--cian); outline-offset: 2px }
+
+/* Nivel del taller */
+.taller-xl .etiquetas { display: flex; flex-wrap: wrap; gap: 6px; align-items: center }
+.nivel { font-family: var(--f-ui); font-weight: 700; font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; background: rgba(3, 8, 36, .6); box-shadow: inset 0 0 0 1.5px currentColor }
+.nivel-basico { color: var(--ok) }
+.nivel-intermedio { color: var(--alerta) }
+.nivel-avanzado { color: var(--peligro) }
+@media (max-width: 440px) {
+  .selector-tipo { gap: 4px; padding: 4px }
+  .selector-tipo span { font-size: .8rem; padding: 10px 2px; letter-spacing: 0; overflow-wrap: normal }
+}
+@media (max-width: 380px) { .selector-tipo span { font-size: .72rem } }

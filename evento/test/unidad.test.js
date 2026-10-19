@@ -22,12 +22,21 @@ test('validación del registro de estudiantes', () => {
   assert.equal(v.telefonoChile('+56 9 1234 5678'), '+56912345678');
   assert.equal(v.correoInstitucional('a..b@inacapmail.cl'), null);
   assert.equal(v.correoInstitucional('juan@inacapmail.cl.evil.com'), null);
+  assert.equal(v.correoInstitucional('profe@inacap.cl'), 'profe@inacap.cl');
+  assert.equal(v.correoInstitucional('profe@inacap.cl', 'inacapmail.cl'), null);
+  const docente = v.validarRegistro({ tipo: 'docente', nombres: 'Ana', apellidos: 'Soto', rut: '12.345.678-5', sede: 'Talca', email: 'ana.soto@inacap.cl', telefono: '912345678' });
+  assert.deepEqual(docente.errores, {});
+  assert.equal(docente.datos.tipo, 'docente');
+  assert.ok(v.validarRegistro({ ...docente.datos, rut: '12.345.678-5', email: 'ana@inacapmail.cl' }).errores.email, 'un docente usa @inacap.cl');
+  assert.equal(v.validarRegistro({ tipo: 'hacker' }).datos.tipo, 'estudiante');
   assert.equal(v.linea('  hola\u0000‮ mundo  ', 50), 'hola mundo');
 });
 
 test('validación de talleres y contraseñas', () => {
   const t = v.validarTaller({ titulo: 'Taller', inicio: '2026-11-12T10:00', fin: '2026-11-12T09:00', cupos: 0 });
   assert.ok(t.errores.fin && t.errores.cupos);
+  assert.equal(v.validarTaller({ titulo: 'T', nivel: 'Avanzado' }).datos.nivel, 'Avanzado');
+  assert.equal(v.validarTaller({ titulo: 'T', nivel: '<b>' }).datos.nivel, '');
   assert.ok(v.validarTaller({ titulo: 'Taller', inicio: '2026-02-30T10:00', fin: '2026-03-01T10:00', cupos: 5 }).errores.inicio);
   assert.ok(v.validarClave('corta'));
   assert.ok(v.validarClave('solominusculasaaa'));

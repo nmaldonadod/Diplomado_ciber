@@ -10,7 +10,7 @@ const RE_CODIGO = /^[A-Z2-9]{16}$/;
 //  - Código de la entrada escrito a mano:        XXXX XXXX XXXX XXXX
 //  - Cédula de identidad chilena (QR del reverso): https://portal.sidiv.registrocivil.cl/docstatus?RUN=12345678-5&...
 //  - RUT escrito a mano: 12.345.678-5
-//  - Correo institucional (escrito o dentro de un QR/credencial): nombre@inacapmail.cl
+//  - Correo institucional (escrito o dentro de un QR/credencial): nombre@inacapmail.cl o nombre@inacap.cl
 function extraerIdentidad(texto) {
   const t = String(texto ?? '').trim().slice(0, 2048);
   if (!t) return null;
@@ -37,7 +37,7 @@ function extraerIdentidad(texto) {
     if (rut) return { tipo: 'rut', rut, fuente: 'texto' };
   }
 
-  for (const m of t.matchAll(/[A-Za-z0-9._-]+@inacapmail\.cl\b/gi)) {
+  for (const m of t.matchAll(/[A-Za-z0-9._-]+@inacap(?:mail)?\.cl\b/gi)) {
     const email = correoInstitucional(m[0]);
     if (email) return { tipo: 'email', email };
   }

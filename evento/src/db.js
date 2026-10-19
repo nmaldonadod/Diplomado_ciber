@@ -39,6 +39,7 @@ const ESQUEMA = `
   -- rut_idx y email_idx son HMAC para búsquedas exactas y unicidad, sin guardar el dato en claro.
   CREATE TABLE IF NOT EXISTS estudiantes (
     id INTEGER PRIMARY KEY,
+    tipo TEXT NOT NULL DEFAULT 'estudiante',
     nombres TEXT NOT NULL,
     apellidos TEXT NOT NULL,
     busqueda TEXT NOT NULL,
@@ -93,6 +94,7 @@ const ESQUEMA = `
     titulo TEXT NOT NULL,
     descripcion TEXT NOT NULL DEFAULT '',
     docente TEXT NOT NULL DEFAULT '',
+    nivel TEXT NOT NULL DEFAULT '',
     foto TEXT,
     sala TEXT NOT NULL DEFAULT '',
     inicio TEXT NOT NULL,
@@ -153,6 +155,10 @@ export function crearDB(storage) {
     sql.exec('ALTER TABLE estudiantes ADD COLUMN rut_cif TEXT');
     sql.exec('ALTER TABLE estudiantes ADD COLUMN rut_idx TEXT');
   }
+  if (!columnas.includes('tipo')) sql.exec("ALTER TABLE estudiantes ADD COLUMN tipo TEXT NOT NULL DEFAULT 'estudiante'");
+  if (!sql.exec("SELECT 1 FROM pragma_table_info('talleres') WHERE name = 'nivel'").toArray().length) {
+    sql.exec("ALTER TABLE talleres ADD COLUMN nivel TEXT NOT NULL DEFAULT ''");
+  }
   sql.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_est_rut ON estudiantes(rut_idx) WHERE rut_idx IS NOT NULL');
 
   // Transacción reentrante: una llamada anidada se une a la transacción en curso.
@@ -204,9 +210,9 @@ export function crearDB(storage) {
         let codigo;
         do codigo = codigoAleatorio(16); while (p('SELECT 1 FROM estudiantes WHERE codigo = ?').get(codigo));
         const t = ahora();
-        const r = p(`INSERT INTO estudiantes (nombres, apellidos, busqueda, sede, email_cif, email_idx, rut_cif, rut_idx, telefono_cif, codigo, acceso_hash,
-                       origen, consentimiento_en, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-          .run(d.nombres, d.apellidos, normalizar(`${d.nombres} ${d.apellidos}`), d.sede, d.email_cif, idx, d.rut_cif || null, d.rut_idx || null, d.telefono_cif, codigo, accesoHash,
+        const r = p(`INSERT INTO estudiantes (tipo, nombres, apellidos, busqueda, sede, email_cif, email_idx, rut_cif, rut_idx, telefono_cif, codigo, acceso_hash,
+                       origen, consentimiento_en, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+          .run(d.tipo || 'estudiante', d.nombres, d.apellidos, normalizar(`${d.nombres} ${d.apellidos}`), d.sede, d.email_cif, idx, d.rut_cif || null, d.rut_idx || null, d.telefono_cif, codigo, accesoHash,
             origen, t, t);
         return estudiantes.porId(Number(r.lastInsertRowid));
       });
@@ -216,7 +222,7 @@ export function crearDB(storage) {
     porRutIdx: (idx) => p('SELECT * FROM estudiantes WHERE rut_idx = ?').get(idx),
     porCodigo: (codigo) => p('SELECT * FROM estudiantes WHERE codigo = ?').get(codigo),
     // emailIdx / rutIdx: índice ciego cuando la búsqueda es un correo o un RUT completo.
-    buscar({ q = '', emailIdx = null, rutIdx = null, sede = '', estado = '', limite = 50, desde = 0 } = {}) {
+    buscar({ q = '', emailIdx = null, rutIdx = null, sede = '', tipo = '', estado = '', limite = 50, desde = 0 } = {}) {
       const condiciones = [];
       const args = [];
       const texto = String(q).trim().slice(0, 80);
@@ -233,6 +239,7 @@ export function crearDB(storage) {
         }
       }
       if (sede) { condiciones.push('sede = ?'); args.push(sede); }
+      if (tipo) { condiciones.push('tipo = ?'); args.push(tipo); }
       if (estado === 'acreditados') condiciones.push('acreditado_en IS NOT NULL');
       if (estado === 'pendientes') condiciones.push('acreditado_en IS NULL');
       const where = condiciones.length ? 'WHERE ' + condiciones.join(' AND ') : '';
@@ -329,13 +336,13 @@ export function crearDB(storage) {
   };
 
   // ---------- talleres ----------
-  const COLS_TALLER = 'id, titulo, descripcion, docente, foto, sala, inicio, fin, cupos, publicado';
+  const COLS_TALLER = 'id, titulo, descripcion, docente, nivel, foto, sala, inicio, fin, cupos, publicado';
   const talleres = {
     listar: (soloPublicados) => p(`SELECT ${COLS_TALLER} FROM talleres ${soloPublicados ? 'WHERE publicado = 1' : ''} ORDER BY inicio, titulo`).all(),
     get: (id) => p(`SELECT ${COLS_TALLER} FROM talleres WHERE id = ?`).get(id),
     crear(d) {
-      const r = p('INSERT INTO talleres (titulo, descripcion, docente, sala, inicio, fin, cupos, publicado, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-        .run(d.titulo, d.descripcion, d.docente, d.sala, d.inicio, d.fin, d.cupos, d.publicado ? 1 : 0, ahora());
+      const r = p('INSERT INTO talleres (titulo, descripcion, docente, nivel, sala, inicio, fin, cupos, publicado, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        .run(d.titulo, d.descripcion, d.docente, d.nivel || '', d.sala, d.inicio, d.fin, d.cupos, d.publicado ? 1 : 0, ahora());
       return talleres.get(Number(r.lastInsertRowid));
     },
     actualizar(id, d) {
@@ -344,8 +351,8 @@ export function crearDB(storage) {
         if (d.cupos < inscritos) {
           throw new ErrorNegocio('CUPOS_INSUFICIENTES', `Ya hay ${inscritos} inscritos: los cupos no pueden ser menos que eso.`, 422);
         }
-        p('UPDATE talleres SET titulo = ?, descripcion = ?, docente = ?, sala = ?, inicio = ?, fin = ?, cupos = ?, publicado = ? WHERE id = ?')
-          .run(d.titulo, d.descripcion, d.docente, d.sala, d.inicio, d.fin, d.cupos, d.publicado ? 1 : 0, id);
+        p('UPDATE talleres SET titulo = ?, descripcion = ?, docente = ?, nivel = ?, sala = ?, inicio = ?, fin = ?, cupos = ?, publicado = ? WHERE id = ?')
+          .run(d.titulo, d.descripcion, d.docente, d.nivel || '', d.sala, d.inicio, d.fin, d.cupos, d.publicado ? 1 : 0, id);
         return talleres.get(id);
       });
     },
@@ -424,6 +431,7 @@ export function crearDB(storage) {
   const estadisticas = () => ({
     ...p(`SELECT COUNT(*) AS registrados, COUNT(acreditado_en) AS acreditados,
                  COALESCE(SUM(origen = 'presencial'), 0) AS presenciales FROM estudiantes`).get(),
+    porTipo: p(`SELECT tipo, COUNT(*) AS registrados, COUNT(acreditado_en) AS acreditados FROM estudiantes GROUP BY tipo ORDER BY 2 DESC`).all(),
     porSede: p(`SELECT sede, COUNT(*) AS registrados, COUNT(acreditado_en) AS acreditados FROM estudiantes GROUP BY sede ORDER BY 2 DESC`).all(),
     ultimas: p(`SELECT e.id, e.nombres, e.apellidos, e.sede, e.acreditado_en, u.nombre AS acreditador FROM estudiantes e
                 LEFT JOIN usuarios u ON u.id = e.acreditado_por WHERE e.acreditado_en IS NOT NULL

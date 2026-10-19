@@ -40,6 +40,8 @@ const seCruzan = (a, b) => a.inicio < b.fin && b.inicio < a.fin;
 const cupoDe = (t) => estado.cupos[t.id] || { cupos: t.cupos, inscritos: 0 };
 const quedan = (t) => cupoDe(t).cupos - cupoDe(t).inscritos;
 const nombreCompleto = (p) => `${p.nombres} ${p.apellidos}`;
+const ETIQUETA_TIPO = { estudiante: 'Estudiante', docente: 'Docente', administrativo: 'Administrativo' };
+const esEstudiante = () => !estado.yo || (estado.yo.tipo || 'estudiante') === 'estudiante';
 const talleresTxt = (n) => (n === 1 ? '1 taller' : `${n} talleres`);
 
 // Motivo por el que no se puede elegir un taller dada una selección (null = se puede).
@@ -130,7 +132,7 @@ function vistaInicio() {
       el('section', { class: 'card' },
         el('h2', null, '¿Cómo participar?'),
         el('ol', { class: 'pasos' },
-          el('li', null, el('span', null, el('strong', null, 'Inscríbete'), ' con tu RUT e INACAPMAIL. Recibirás tu entrada digital con código QR.')),
+          el('li', null, el('span', null, el('strong', null, 'Inscríbete'), ' con tu RUT y correo institucional. Recibirás tu entrada digital con código QR.')),
           el('li', null, el('span', null, el('strong', null, 'Elige tus talleres'), ' al inscribirte o después', e.maxTalleres === 1 ? ' (1 por persona)' : e.maxTalleres ? ` (hasta ${e.maxTalleres})` : '', '. Los cupos son limitados y se actualizan en vivo.')),
           el('li', null, el('span', null, el('strong', null, 'Acredítate'), ' el día del evento mostrando el QR de tu entrada.')))),
       el('section', { class: 'card' },
@@ -158,7 +160,7 @@ function selectorTalleres() {
         el('span', { style: { flex: 1 } },
           el('span', { class: 't' }, t.titulo),
           el('span', { class: 'd', style: { display: 'block' } },
-            `${nombreDia(fechaDe(t.inicio), { weekday: 'short', day: 'numeric', month: 'short' })} · ${hora(t.inicio)}–${hora(t.fin)}${t.docente ? ' · ' + t.docente : ''}`),
+            `${hora(t.inicio)}–${hora(t.fin)} · ${t.sala}${t.nivel ? ' · Nivel ' + t.nivel.toLowerCase() : ''}${t.docente ? ' · ' + partirDocente(t.docente)[0] : ''}`),
           motivo && el('span', { class: 'd', style: { display: 'block', color: 'var(--alerta)' } }, motivo),
           widgetCupo(cupoDe(t))));
     }));
@@ -191,35 +193,64 @@ function vistaRegistro() {
   if (selector) alCambiarCupos = selector.__redibujar;
 
   // ---------- paso 1: datos y talleres ----------
+  const TIPOS = ETIQUETA_TIPO;
+  const dominios = estado.datos.tiposParticipante || { estudiante: estado.datos.dominioCorreo };
+  const tipoSel = el('div', { class: 'selector-tipo', role: 'radiogroup', 'aria-label': 'Tipo de participante', 'data-campo': 'tipo' },
+    Object.entries(TIPOS).map(([valor, texto]) => el('label', null,
+      el('input', { type: 'radio', name: 'tipo', value: valor, checked: valor === 'estudiante' }),
+      el('span', null, texto))));
+  const notaTalleres = el('p', { class: 'aviso info oculto' },
+    'Los talleres están pensados para estudiantes. Podrás verlos más tarde en la sección Talleres.');
+  const bloqueTalleres = selector && el('fieldset', null,
+    el('legend', null, 'Elige tu taller (opcional)'),
+    el('p', { class: 'sub', style: { fontSize: '.88rem' } }, 'Puedes elegirlo ahora o más tarde desde la sección Talleres.', e.maxTalleres ? ` Máximo ${talleresTxt(e.maxTalleres)}.` : ''),
+    selector);
+
   const form = el('form', { class: 'card', novalidate: true },
     el('span', { class: 'eyebrow' }, 'Inscripción'),
     el('h1', null, 'Inscríbete al evento'),
     pasosInscripcion(1),
     aviso,
+    el('div', { class: 'campo' }, el('span', { class: 'etiqueta' }, 'Soy'), tipoSel),
     el('div', { class: 'grid grid-2', style: { gap: '0 16px' } },
       campo('nombres', 'Nombres', { autocomplete: 'given-name', required: true, maxlength: 60 }),
       campo('apellidos', 'Apellidos', { autocomplete: 'family-name', required: true, maxlength: 60 })),
     el('div', { class: 'grid grid-2', style: { gap: '0 16px' } },
       campo('rut', 'RUT', { autocomplete: 'off', required: true, maxlength: 12, placeholder: '12.345.678-5', inputmode: 'text' }),
       campo('telefono', 'Teléfono', { type: 'tel', autocomplete: 'tel', required: true, placeholder: '9 1234 5678', maxlength: 16, inputmode: 'tel' })),
-    campo('email', 'INACAPMAIL', { type: 'email', autocomplete: 'email', required: true, maxlength: 120, placeholder: `nombre.apellido@${estado.datos.dominioCorreo}`, inputmode: 'email' }),
+    campo('email', 'INACAPMAIL', { type: 'email', autocomplete: 'email', required: true, maxlength: 120, placeholder: `nombre.apellido@${dominios.estudiante}`, inputmode: 'email' }),
     campo('sede', 'Sede', { opciones: estado.datos.sedes, required: true }),
-    selector && el('fieldset', null,
-      el('legend', null, 'Elige tu taller (opcional)'),
-      el('p', { class: 'sub', style: { fontSize: '.88rem' } }, 'Puedes elegirlo ahora o más tarde desde la sección Talleres.', e.maxTalleres ? ` Máximo ${talleresTxt(e.maxTalleres)}.` : ''),
-      selector),
+    bloqueTalleres,
+    notaTalleres,
     el('button', { class: 'btn btn-primario btn-bloque', type: 'submit' }, 'Continuar →'),
     el('p', { class: 'sub', style: { marginTop: '14px', fontSize: '.88rem', textAlign: 'center' } },
       '¿Ya te inscribiste? ', el('a', { href: '#/acceso' }, 'Recupera tu entrada')));
   form.elements.rut.addEventListener('input', (x) => (x.target.value = formatearRutInput(x.target.value)));
 
+  const tipoActual = () => form.elements.tipo.value || 'estudiante';
+  // Docentes y administrativos usan @inacap.cl y no se les ofrecen talleres al inscribirse.
+  function aplicarTipo() {
+    const tipo = tipoActual();
+    const email = form.querySelector('[data-campo="email"]');
+    email.querySelector('label').textContent = tipo === 'estudiante' ? 'INACAPMAIL' : 'Correo INACAP';
+    email.querySelector('input').placeholder = `nombre.apellido@${dominios[tipo]}`;
+    bloqueTalleres?.classList.toggle('oculto', tipo !== 'estudiante');
+    notaTalleres.classList.toggle('oculto', tipo === 'estudiante');
+  }
+  tipoSel.addEventListener('change', aplicarTipo);
+
   function leerDatos() {
     const f = form.elements;
+    const tipo = tipoActual();
     return {
+      tipo,
       nombres: f.nombres.value.trim(), apellidos: f.apellidos.value.trim(), rut: f.rut.value, email: f.email.value.trim(),
-      telefono: f.telefono.value.trim(), sede: f.sede.value, talleres: selector ? selector.__seleccion() : [],
+      telefono: f.telefono.value.trim(), sede: f.sede.value, talleres: selector && tipo === 'estudiante' ? selector.__seleccion() : [],
     };
   }
+
+  // Valida el correo según el dominio que corresponde al tipo de participante.
+  const correoDelTipo = (email, tipo) => correoValido(email) && email.trim().toLowerCase().endsWith('@' + dominios[tipo]);
 
   form.addEventListener('submit', (evt) => {
     evt.preventDefault();
@@ -228,7 +259,7 @@ function vistaRegistro() {
     if (d.nombres.length < 2) errores.nombres = 'Ingresa tus nombres.';
     if (d.apellidos.length < 2) errores.apellidos = 'Ingresa tus apellidos.';
     if (!rutValido(d.rut)) errores.rut = 'RUT inválido. Revisa el dígito verificador.';
-    if (!correoValido(d.email)) errores.email = `Usa tu correo institucional @${estado.datos.dominioCorreo}.`;
+    if (!correoDelTipo(d.email, d.tipo)) errores.email = `Usa tu correo institucional @${dominios[d.tipo]}.`;
     if (!telefonoValido(d.telefono)) errores.telefono = 'Teléfono inválido (ej: 9 1234 5678).';
     if (!d.sede) errores.sede = 'Selecciona tu sede.';
     mostrarErrores(form, errores);
@@ -256,16 +287,17 @@ function vistaRegistro() {
       pasosInscripcion(2),
       avisoResumen,
       el('dl', null,
+        fila('Participante', TIPOS[d.tipo]),
         fila('Nombre', `${d.nombres} ${d.apellidos}`),
         fila('RUT', formatearRutInput(d.rut)),
-        fila('INACAPMAIL', d.email.toLowerCase()),
+        fila(d.tipo === 'estudiante' ? 'INACAPMAIL' : 'Correo', d.email.toLowerCase()),
         fila('Teléfono', d.telefono),
         fila('Sede', d.sede),
-        fila(elegidos.length > 1 ? 'Talleres' : 'Taller', elegidos.length
+        d.tipo === 'estudiante' && fila(elegidos.length > 1 ? 'Talleres' : 'Taller', elegidos.length
           ? el('ul', null, elegidos.map((t) => el('li', null, el('strong', null, t.titulo), el('br'),
             el('span', { class: 'sub' }, `${hora(t.inicio)}–${hora(t.fin)} · ${t.sala}`))))
           : el('span', { class: 'sub' }, 'Lo elegirás después'))),
-      el('p', { class: 'nota-resumen' }, 'Si cambias de teléfono, podrás recuperar tu entrada con tu ', el('strong', null, 'RUT, INACAPMAIL y sede'), '.'),
+      el('p', { class: 'nota-resumen' }, 'Si cambias de teléfono, podrás recuperar tu entrada con tu ', el('strong', null, 'RUT, correo y sede'), '.'),
       el('label', { class: 'check', 'data-campo': 'consentimiento', for: 'f-consentimiento' },
         consentimiento,
         el('span', null, 'Autorizo el uso de mis datos sólo para gestionar mi participación en este evento, según la ',
@@ -334,7 +366,7 @@ function vistaAcceso() {
     el('p', { class: 'sub', style: { marginBottom: '18px' } }, 'Ingresa los mismos datos que usaste al inscribirte.'),
     aviso,
     campo('rut', 'RUT', { autocomplete: 'off', required: true, maxlength: 12, placeholder: '12.345.678-5' }),
-    campo('email', 'INACAPMAIL', { type: 'email', autocomplete: 'email', required: true, inputmode: 'email' }),
+    campo('email', 'Correo institucional', { type: 'email', autocomplete: 'email', required: true, inputmode: 'email', placeholder: '@inacapmail.cl o @inacap.cl' }),
     campo('sede', 'Sede', { opciones: estado.datos.sedes, required: true }),
     el('button', { class: 'btn btn-primario btn-bloque', type: 'submit' }, 'Recuperar mi entrada'),
     el('p', { class: 'sub', style: { marginTop: '14px', fontSize: '.86rem', textAlign: 'center' } },
@@ -345,7 +377,7 @@ function vistaAcceso() {
     const f = form.elements;
     const errores = {};
     if (!rutValido(f.rut.value)) errores.rut = 'RUT inválido. Revisa el dígito verificador.';
-    if (!correoValido(f.email.value)) errores.email = 'Ingresa tu INACAPMAIL.';
+    if (!correoValido(f.email.value)) errores.email = 'Ingresa tu correo institucional.';
     if (!f.sede.value) errores.sede = 'Selecciona tu sede.';
     mostrarErrores(form, errores);
     aviso.classList.add('oculto');
@@ -382,7 +414,7 @@ function vistaEntrada() {
         el('p', { class: 'sub' }, 'Inscríbete para obtener tu entrada con código QR y elegir talleres.'),
         el('div', { class: 'acciones' }, el('a', { class: 'btn btn-primario', href: '#/registro' }, 'Inscribirme'))),
       el('section', { class: 'card' }, el('h2', null, '¿Ya estás inscrito?'),
-        el('p', { class: 'sub' }, 'Recupera tu entrada con tu RUT, INACAPMAIL y sede.'),
+        el('p', { class: 'sub' }, 'Recupera tu entrada con tu RUT, correo institucional y sede.'),
         el('div', { class: 'acciones' }, el('a', { class: 'btn btn-contorno', href: '#/acceso' }, 'Recuperar entrada'))));
   }
   const yo = estado.yo;
@@ -397,7 +429,7 @@ function vistaEntrada() {
       el('div', { class: 'cod' }, yo.codigo.replace(/(.{4})/g, '$1 ').trim()),
       el('div', { class: 'quien' },
         el('strong', null, nombreCompleto(yo)),
-        el('span', { class: 'sub' }, yo.sede),
+        el('span', { class: 'sub' }, (yo.tipo && yo.tipo !== 'estudiante' ? `${ETIQUETA_TIPO[yo.tipo]} · ` : '') + yo.sede),
         el('div', { class: 'estado' }, yo.acreditadoEn
           ? el('span', { class: 'chip ok' }, `✓ Acreditado ${horaReal(yo.acreditadoEn)}`)
           : el('span', { class: 'chip alerta' }, 'Pendiente de acreditación')))),
@@ -412,7 +444,7 @@ function vistaEntrada() {
         ? el('ul', { style: { marginTop: '8px' } }, mios.map((t) => el('li', null,
           el('span', null, el('strong', null, t.titulo), el('br'), el('span', { class: 'sub', style: { fontSize: '.85rem' } },
             `${nombreDia(fechaDe(t.inicio), { weekday: 'short', day: 'numeric' })} · ${hora(t.inicio)}–${hora(t.fin)}${t.sala ? ' · ' + t.sala : ''}`)))))
-        : el('p', { class: 'sub', style: { marginTop: '8px' } }, 'Todavía no eliges talleres.'),
+        : el('p', { class: 'sub', style: { marginTop: '8px' } }, esEstudiante() ? 'Todavía no eliges talleres.' : 'Los talleres están pensados para estudiantes; puedes revisarlos cuando quieras.'),
       el('div', { class: 'acciones' },
         el('a', { class: 'btn btn-primario btn-chico', href: '#/talleres' }, mios.length ? 'Cambiar talleres' : 'Elegir talleres'),
         el('a', { class: 'btn btn-contorno btn-chico', href: '#/agenda' }, 'Ver mi agenda'))),
@@ -425,7 +457,7 @@ function vistaEntrada() {
         el('button', {
           class: 'btn btn-contorno btn-chico', type: 'button',
           onclick: async () => {
-            if (!confirm('¿Cerrar sesión en este dispositivo? Podrás recuperar tu entrada con tu RUT, INACAPMAIL y sede.')) return;
+            if (!confirm('¿Cerrar sesión en este dispositivo? Podrás recuperar tu entrada con tu RUT, correo y sede.')) return;
             await api('POST', '/api/salir', {}).catch(() => {});
             estado.yo = null;
             irA('#/');
@@ -502,7 +534,9 @@ function tarjetaTaller(t) {
   return el('article', { class: `taller-xl ${mio ? 'mio' : ''}` },
     el('header', { class: 'portada' },
       el('div', null,
-        el('div', { class: 'sala' }, t.sala || 'Sala por confirmar'),
+        el('div', { class: 'etiquetas' },
+          el('span', { class: 'sala' }, t.sala || 'Sala por confirmar'),
+          t.nivel && el('span', { class: `nivel nivel-${t.nivel.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()}` }, t.nivel)),
         el('div', { class: 'horario' }, `${hora(t.inicio)} – ${hora(t.fin)}`),
         el('div', { class: 'duracion' }, `${nombreDia(fechaDe(t.inicio), { weekday: 'long', day: 'numeric', month: 'long' })} · ${minutos(t)} min`),
         mio && el('span', { class: 'chip ok', style: { marginTop: '10px' } }, '✓ Estás inscrito')),
@@ -524,7 +558,7 @@ function tarjetaTaller(t) {
 // Mosaico de talleres para la portada: un cuadrado por taller.
 function mosaicoTalleres() {
   return el('div', { class: 'mosaico' }, talleres().map((t) => el('a', { class: `cuadro ${esMio(t) ? 'mio' : ''}`, href: '#/talleres' },
-    el('span', { class: 'sala' }, t.sala || 'Taller'),
+    el('span', { class: 'sala' }, t.sala || 'Taller', t.nivel && ` · ${t.nivel}`),
     el('strong', null, t.titulo),
     el('span', { class: 'quien' }, partirDocente(t.docente)[0] || 'Relator por confirmar'),
     el('div', { class: 'base' },
@@ -548,6 +582,7 @@ function vistaTalleres() {
           'Los cupos se actualizan en tiempo real.')),
       estado.yo && vivo(() => el('span', { class: 'chip fuerte' }, `Elegidos: ${estado.yo.talleres.length}${e.maxTalleres ? ' / ' + e.maxTalleres : ''}`))),
     !estado.yo && el('div', { class: 'aviso info' }, 'Para reservar un cupo primero debes ', el('a', { href: '#/registro' }, 'inscribirte en el evento'), '.'),
+    !esEstudiante() && el('div', { class: 'aviso info' }, 'Los talleres están dirigidos a estudiantes. Si te interesa asistir y quedan cupos, igual puedes inscribirte.'),
     !talleres().length && el('p', { class: 'vacio' }, 'Aún no hay talleres publicados.'),
     [...porDia].map(([fecha, lista]) => el('section', { style: { marginBottom: '24px' } },
       el('h2', null, nombreDia(fecha)),

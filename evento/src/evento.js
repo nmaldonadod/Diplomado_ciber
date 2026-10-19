@@ -146,7 +146,7 @@ export class EventoDO {
 
   perfil(e) {
     return {
-      nombres: e.nombres, apellidos: e.apellidos, rut: formatearRut(e.rut), sede: e.sede, email: e.email, telefono: e.telefono,
+      tipo: e.tipo, nombres: e.nombres, apellidos: e.apellidos, rut: formatearRut(e.rut), sede: e.sede, email: e.email, telefono: e.telefono,
       codigo: e.codigo, qr: PREFIJO_TICKET + e.codigo, acreditadoEn: e.acreditado_en,
       talleres: this.db.inscripciones.de(e.id).map((t) => t.id),
     };
@@ -155,7 +155,7 @@ export class EventoDO {
   // Lo que ve el acreditador: lo mínimo para identificar y orientar al estudiante.
   fichaAcreditador(e) {
     return {
-      id: e.id, nombres: e.nombres, apellidos: e.apellidos, rut: enmascararRut(e.rut), sede: e.sede, email: enmascararEmail(e.email),
+      id: e.id, tipo: e.tipo, nombres: e.nombres, apellidos: e.apellidos, rut: enmascararRut(e.rut), sede: e.sede, email: enmascararEmail(e.email),
       acreditadoEn: e.acreditado_en, talleres: this.db.inscripciones.de(e.id),
     };
   }
@@ -186,6 +186,8 @@ export class EventoDO {
       },
       sedes: v.SEDES,
       dominioCorreo: v.DOMINIO_CORREO,
+      tiposParticipante: v.TIPOS_PARTICIPANTE,
+      niveles: v.NIVELES,
       agenda: this.db.agenda.listar(),
       talleres: this.db.talleres.listar(true).map((t) => this.tallerPublico(t)),
       cupos: this.db.talleres.cupos(),
@@ -203,7 +205,9 @@ export class EventoDO {
       for (const a of agenda) this.db.agenda.crear(a);
       const existentes = this.db.talleres.listar(false);
       for (const t of talleres) {
-        const previo = existentes.find((x) => x.sala === t.sala && x.inicio.slice(0, 10) === t.inicio.slice(0, 10));
+        // Misma sala (o una variante más detallada, p. ej. «CREA Empresa» → «CREA Empresa (Biblioteca)») y mismo día.
+        const misma = (a, b) => a === b || (a.length > 2 && b.length > 2 && (a.startsWith(b) || b.startsWith(a)));
+        const previo = existentes.find((x) => x.inicio.slice(0, 10) === t.inicio.slice(0, 10) && misma(x.sala, t.sala));
         if (previo) {
           this.db.talleres.actualizar(previo.id, t);
           actualizados += 1;
@@ -688,6 +692,7 @@ export class EventoDO {
         emailIdx: email ? await (await this.cifrador()).indice(email) : q.includes('@') ? 'sin-coincidencias' : null,
         rutIdx: !q.includes('@') && /^[\d.\s-]+[\dkK]$/.test(q) && normalizarRut(q) ? await this.indiceRut(normalizarRut(q)) : null,
         sede: v.SEDES.includes(s.get('sede')) ? s.get('sede') : '',
+        tipo: Object.hasOwn(v.TIPOS_PARTICIPANTE, s.get('tipo') || '') ? s.get('tipo') : '',
         estado: s.get('estado') || '', limite: 50, desde: Number(s.get('desde')) || 0,
       });
       const filas = await this.hidratarTodos(r.filas);
@@ -794,7 +799,7 @@ export class EventoDO {
       this.audit(c, actorDe(u), 'exportar_estudiantes', null);
       const filas = await this.hidratarTodos(db().estudiantes.todos());
       const cuerpo = csv(filas, [
-        ['Nombres', (f) => f.nombres], ['Apellidos', (f) => f.apellidos], ['RUT', (f) => formatearRut(f.rut)], ['Sede', (f) => f.sede],
+        ['Tipo', (f) => f.tipo], ['Nombres', (f) => f.nombres], ['Apellidos', (f) => f.apellidos], ['RUT', (f) => formatearRut(f.rut)], ['Sede', (f) => f.sede],
         ['INACAPMAIL', (f) => f.email], ['Teléfono', (f) => telefonoLocal(f.telefono)], ['Origen', (f) => f.origen],
         ['Inscrito', (f) => f.creado_en], ['Acreditado', (f) => f.acreditado_en],
         ['Talleres', (f) => db().inscripciones.de(f.id).map((t) => t.titulo).join(' | ')],
@@ -807,7 +812,7 @@ export class EventoDO {
       const filas = await this.hidratarTodos(db().inscripciones.todas());
       const cuerpo = csv(filas, [
         ['Taller', (f) => f.titulo], ['Inicio', (f) => f.inicio], ['Sala', (f) => f.sala],
-        ['Nombres', (f) => f.nombres], ['Apellidos', (f) => f.apellidos], ['RUT', (f) => formatearRut(f.rut)], ['Sede', (f) => f.sede],
+        ['Tipo', (f) => f.tipo], ['Nombres', (f) => f.nombres], ['Apellidos', (f) => f.apellidos], ['RUT', (f) => formatearRut(f.rut)], ['Sede', (f) => f.sede],
         ['INACAPMAIL', (f) => f.email], ['Teléfono', (f) => telefonoLocal(f.telefono)], ['Acreditado', (f) => f.acreditado_en],
       ]);
       return new Response(cuerpo, { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Disposition': 'attachment; filename="inscripciones-talleres.csv"' } });

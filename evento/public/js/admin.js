@@ -10,6 +10,7 @@ const PESTANAS = [
   ['estudiantes', 'Estudiantes'], ['usuarios', 'Usuarios'], ['auditoria', 'Auditoría'], ['cuenta', 'Mi cuenta'],
 ];
 
+const ETIQUETA_TIPO = { estudiante: 'Estudiante', docente: 'Docente', administrativo: 'Administrativo' };
 const nombreDe = (e) => `${e.nombres} ${e.apellidos}`;
 const rango = (i) => `${nombreDia(fechaDe(i.inicio), { weekday: 'short', day: 'numeric', month: 'short' })} · ${hora(i.inicio)}–${hora(i.fin)}`;
 
@@ -93,7 +94,11 @@ async function vistaResumen() {
             el('div', { class: 'q' }, el('strong', null, nombreDe(u)), el('span', null, `${u.sede}${u.acreditador ? ' · por ' + u.acreditador : ''}`)),
             el('span', { class: 'chip ok' }, horaReal(u.acreditado_en))))
           : el('p', { class: 'sub' }, 'Aún no hay acreditaciones.')),
-      el('section', { class: 'card' }, el('h2', null, 'Por sede'),
+      el('section', { class: 'card' }, el('h2', null, 'Por tipo de participante'),
+        el('table', { class: 'tabla', style: { marginBottom: '18px' } },
+          el('thead', null, el('tr', null, el('th', null, 'Tipo'), el('th', null, 'Inscritos'), el('th', null, 'Acreditados'))),
+          el('tbody', null, (s.porTipo || []).map((r) => el('tr', null, el('td', null, ETIQUETA_TIPO[r.tipo] || r.tipo), el('td', null, r.registrados), el('td', null, r.acreditados))))),
+        el('h2', null, 'Por sede'),
         el('table', { class: 'tabla' },
           el('thead', null, el('tr', null, el('th', null, 'Sede'), el('th', null, 'Inscritos'), el('th', null, 'Acreditados'))),
           el('tbody', null, s.porSede.map((r) => el('tr', null, el('td', null, r.sede), el('td', null, r.registrados), el('td', null, r.acreditados))))),
@@ -232,7 +237,8 @@ function formularioTaller(t, alGuardar) {
   const form = el('form', { novalidate: true },
     vistaFoto,
     campo('titulo', 'Título', { value: t.titulo, maxlength: 120 }),
-    campo('docente', 'Docente / relator', { value: t.docente, maxlength: 100 }),
+    campo('docente', 'Relator', { value: t.docente, maxlength: 160, ayuda: 'Nombre y, después de una coma, su cargo. Ej: René Guerrero, Docente INACAP' }),
+    campo('nivel', 'Nivel', { opciones: adm.niveles }),
     campo('descripcion', 'Descripción', { multilinea: true, maxlength: 1500 }),
     el('div', { class: 'grid grid-2', style: { gap: '0 16px' } },
       campo('inicio', 'Inicio', { type: 'datetime-local', value: t.inicio }),
@@ -245,7 +251,7 @@ function formularioTaller(t, alGuardar) {
 
   alEnviar(form, async (f) => {
     const datos = {
-      titulo: f.titulo.value, docente: f.docente.value, descripcion: f.descripcion.value, inicio: f.inicio.value,
+      titulo: f.titulo.value, docente: f.docente.value, nivel: f.nivel.value, descripcion: f.descripcion.value, inicio: f.inicio.value,
       fin: f.fin.value, sala: f.sala.value, cupos: Number(f.cupos.value), publicado: f.publicado.checked,
     };
     let guardado = await llamar(nuevo ? 'POST' : 'PUT', nuevo ? '/api/admin/talleres' : `/api/admin/talleres/${t.id}`, datos);
@@ -398,7 +404,7 @@ async function detalleEstudiante(id, alCambiar) {
 
   // el() descarta los valores false de los elementos condicionales.
   const cont = el('div', null,
-    el('p', null, el('strong', null, e.email), el('br'), el('span', { class: 'sub' }, [e.rut, e.telefono, e.sede].filter(Boolean).join(' · '))),
+    el('p', null, el('span', { class: 'chip' }, ETIQUETA_TIPO[e.tipo] || 'Estudiante'), ' ', el('strong', null, e.email), el('br'), el('span', { class: 'sub' }, [e.rut, e.telefono, e.sede].filter(Boolean).join(' · '))),
     el('p', { class: 'sub', style: { fontSize: '.84rem' } },
       `Inscrito: ${new Date(e.creadoEn).toLocaleString('es-CL')} (${e.origen}) · Consentimiento: ${e.consentimientoEn ? new Date(e.consentimientoEn).toLocaleString('es-CL') : '—'}`),
     el('p', null, e.acreditadoEn ? el('span', { class: 'chip ok' }, `✓ Acreditado ${new Date(e.acreditadoEn).toLocaleString('es-CL')}`) : el('span', { class: 'chip alerta' }, 'No acreditado')),
@@ -439,19 +445,22 @@ async function detalleEstudiante(id, alCambiar) {
 async function vistaEstudiantes() {
   const q = el('input', { type: 'search', placeholder: 'Nombre, apellido, RUT o INACAPMAIL completo', 'aria-label': 'Buscar', maxlength: 80 });
   const sede = el('select', { 'aria-label': 'Sede' }, el('option', { value: '' }, 'Todas las sedes'), adm.sedes.map((s) => el('option', { value: s }, s)));
+  const tipo = el('select', { 'aria-label': 'Tipo de participante' }, el('option', { value: '' }, 'Todos los tipos'),
+    Object.entries(ETIQUETA_TIPO).map(([v, txt]) => el('option', { value: v }, txt)));
   const estado = el('select', { 'aria-label': 'Estado' },
     el('option', { value: '' }, 'Todos'), el('option', { value: 'acreditados' }, 'Acreditados'), el('option', { value: 'pendientes' }, 'No acreditados'));
   const lista = el('section', { class: 'card lista-admin' }, el('p', { class: 'sub' }, 'Cargando…'));
   let desde = 0;
 
   async function cargar() {
-    const params = new URLSearchParams({ q: q.value.trim(), sede: sede.value, estado: estado.value, desde: String(desde) });
+    const params = new URLSearchParams({ q: q.value.trim(), sede: sede.value, tipo: tipo.value, estado: estado.value, desde: String(desde) });
     try {
       const r = await llamar('GET', '/api/admin/estudiantes?' + params);
       lista.replaceChildren(
         el('p', { class: 'sub', style: { marginBottom: '6px' } }, `${r.total} estudiante(s)`),
         ...r.filas.map((e) => el('div', { class: 'fila' },
-          el('div', { class: 'q' }, el('strong', null, nombreDe(e)), el('span', null, [e.rut, e.sede, e.email].filter(Boolean).join(' · ')),
+          el('div', { class: 'q' }, el('strong', null, nombreDe(e), e.tipo && e.tipo !== 'estudiante' && el('span', { class: 'chip', style: { marginLeft: '6px' } }, ETIQUETA_TIPO[e.tipo])),
+            el('span', null, [e.rut, e.sede, e.email].filter(Boolean).join(' · ')),
             el('span', { style: { display: 'block' } }, e.talleres.length ? e.talleres.map((t) => t.titulo).join(', ') : 'Sin talleres')),
           el('div', { class: 'btns' },
             e.acreditadoEn ? el('span', { class: 'chip ok' }, '✓ Acreditado') : el('span', { class: 'chip' }, 'Pendiente'),
@@ -466,6 +475,7 @@ async function vistaEstudiantes() {
   let t;
   q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { desde = 0; cargar(); }, 300); });
   sede.addEventListener('change', () => { desde = 0; cargar(); });
+  tipo.addEventListener('change', () => { desde = 0; cargar(); });
   estado.addEventListener('change', () => { desde = 0; cargar(); });
   cargar();
 
@@ -487,7 +497,7 @@ async function vistaEstudiantes() {
     el('div', { class: 'barra-acciones' }, el('h1', null, 'Estudiantes'),
       el('div', { class: 'acciones', style: { margin: 0 } },
         el('a', { class: 'btn btn-contorno btn-chico', href: '/api/admin/exportar/estudiantes.csv' }, 'Exportar CSV'))),
-    el('div', { class: 'filtros-admin' }, q, sede, estado),
+    el('div', { class: 'filtros-admin' }, q, sede, tipo, estado),
     lista,
     purga,
   ];
@@ -644,7 +654,9 @@ async function iniciar() {
       el('div', { class: 'acciones' }, el('a', { class: 'btn btn-primario', href: '/acreditacion' }, 'Ir a acreditación'))));
     return;
   }
-  adm.sedes = (await api('GET', '/api/evento').catch(() => ({}))).sedes || [];
+  const publico = await api('GET', '/api/evento').catch(() => ({}));
+  adm.sedes = publico.sedes || [];
+  adm.niveles = publico.niveles || [];
   cabeceraUsuario(adm.usuario, iniciar, el('span', null, el('a', { href: '/acreditacion' }, 'Acreditación'), ' · '));
   cambiarPestana(adm.pestana);
 }
