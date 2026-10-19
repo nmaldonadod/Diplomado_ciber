@@ -2,20 +2,24 @@
   "name": "plataforma-eventos-inacap",
   "version": "1.0.0",
   "private": true,
-  "description": "Plataforma de eventos estudiantiles sobre Cloudflare Workers: inscripción, talleres con cupos en tiempo real, agenda, acreditación con QR y administración.",
+  "description": "Plataforma de eventos estudiantiles: inscripción, talleres con cupos en tiempo real, agenda, acreditación con QR y administración. Corre en Docker (Node) o en Cloudflare Workers.",
   "scripts": {
     "dev": "wrangler dev",
-    "test": "node --test \"test/*.test.js\"",
+    "test": "node --disable-warning=ExperimentalWarning --test test/unidad.test.js && node --test --test-timeout=150000 test/api.test.js && RUNTIME=node node --disable-warning=ExperimentalWarning --test test/api.test.js",
     "deploy": "wrangler deploy",
     "verificar": "wrangler deploy --dry-run --outdir .wrangler/dist",
-    "desplegar": "bash scripts/desplegar.sh"
+    "desplegar": "bash scripts/desplegar.sh",
+    "start": "node --disable-warning=ExperimentalWarning src/node/servidor.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.13"
   },
   "license": "UNLICENSED",
   "devDependencies": {
     "wrangler": "4.145.0"
   },
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "ws": "8.22.0"
+  }
 }

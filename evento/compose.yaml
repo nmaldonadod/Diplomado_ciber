@@ -1,0 +1,43 @@
+# Uso:
+#   docker compose up -d --build                               → http://localhost:8080
+#   TRUST_PROXY=1 docker compose --profile tunel up -d --build → además, una URL https://….trycloudflare.com
+#                                                                 para probar desde teléfonos (la cámara exige HTTPS)
+name: eventos-inacap
+
+x-endurecido: &endurecido
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+
+services:
+  app:
+    <<: *endurecido
+    build: .
+    image: eventos-inacap:local
+    init: true
+    ports:
+      - "127.0.0.1:8080:8080"   # sólo este computador; el acceso externo va por el túnel HTTPS
+    environment:
+      TRUST_PROXY: "${TRUST_PROXY:-0}"
+      # Opcional: si no se definen, se generan una vez y se guardan en el volumen (datos/secretos.json).
+      DATA_KEY: "${DATA_KEY:-}"
+      TOKEN_CONFIGURACION: "${TOKEN_CONFIGURACION:-}"
+    volumes:
+      - datos:/datos
+    tmpfs:
+      - /tmp
+    mem_limit: 512m
+    pids_limit: 200
+
+  tunel:
+    <<: *endurecido
+    profiles: [tunel]
+    image: cloudflare/cloudflared:2026.9.3
+    command: tunnel --no-autoupdate --url http://app:8080
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  datos:

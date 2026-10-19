@@ -1,13 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { levantarWorker, cliente } from './apoyo.js';
+import { levantarApp, cliente } from './apoyo.js';
 
-// Estas pruebas levantan el Worker real con `wrangler dev` (runtime workerd de Cloudflare).
+// Estas pruebas levantan la app real: el Worker con `wrangler dev` (runtime de Cloudflare) o, con
+// RUNTIME=node, el servidor Node que se usa en Docker.
 const TOKEN = 'TOKENINICIAL1';
 const CLAVE_ADMIN = 'Admin-Segura-2026';
 const DATA_KEY = Buffer.alloc(32, 9).toString('base64');
 
-const levantar = () => levantarWorker({ TOKEN_CONFIGURACION: TOKEN, DATA_KEY });
+const levantar = () => levantarApp({ TOKEN_CONFIGURACION: TOKEN, DATA_KEY });
 
 const ESTUDIANTE = { nombres: 'Ana', apellidos: 'Pérez Soto', sede: 'Rancagua', email: 'ana.perez@inacapmail.cl', telefono: '9 1234 5678', consentimiento: true };
 
@@ -240,7 +241,7 @@ test('tiempo real: los cupos llegan por WebSocket al inscribirse', async (t) => 
 });
 
 test('carga inicial del Mes de la Ciberseguridad e importación desde archivo', async (t) => {
-  const srv = await levantarWorker({ TOKEN_CONFIGURACION: TOKEN, DATA_KEY, EVENTO_INICIAL: 'si' });
+  const srv = await levantarApp({ TOKEN_CONFIGURACION: TOKEN, DATA_KEY, EVENTO_INICIAL: 'si' });
   t.after(() => srv.cerrar());
   const anon = cliente(srv.base);
   let r = await anon('GET', '/api/evento');
@@ -266,4 +267,15 @@ test('carga inicial del Mes de la Ciberseguridad e importación desde archivo', 
   const actualizado = r.body.find((x) => x.sala === 'Lab 409');
   assert.equal(actualizado.id, lab409.id, 'reconoce el taller por sala y día');
   assert.equal(actualizado.titulo, 'Taller nuevo en Lab 409');
+});
+
+test('servidor Node: la IP del cliente no se puede falsificar para evadir límites', { skip: process.env.RUNTIME !== 'node' }, async (t) => {
+  const srv = await levantar();
+  t.after(() => srv.cerrar());
+  const c = cliente(srv.base);
+  let ultimo;
+  for (let i = 0; i < 20; i++) {
+    ultimo = await c('POST', '/api/staff/login', { email: 'x@y.cl', clave: 'z' }, { 'CF-Connecting-IP': `10.0.0.${i}`, 'X-Forwarded-For': `10.0.1.${i}` });
+  }
+  assert.equal(ultimo.status, 429, 'cuenta todos los intentos como la misma IP real');
 });

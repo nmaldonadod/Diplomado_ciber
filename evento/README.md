@@ -1,6 +1,7 @@
 # Mes de la Ciberseguridad · plataforma de eventos INACAP
 
-Aplicación web para el evento, pensada para usarse desde el teléfono y publicada en **Cloudflare Workers**.
+Aplicación web para el evento, pensada para usarse desde el teléfono. El mismo código corre **en Docker**
+(servidor Node.js con SQLite) o en **Cloudflare Workers** (Durable Object + R2).
 Tiene **tres interfaces**, cada una con sus propios permisos:
 
 | Interfaz | URL | Quién | Qué hace |
@@ -12,7 +13,42 @@ Tiene **tres interfaces**, cada una con sus propios permisos:
 Datos que se piden al estudiante: nombres · apellidos · sede (Santiago Centro, Santiago Sur, Rancagua, Talca, Curicó,
 Apoquindo, Valparaíso) · INACAPMAIL (sólo `@inacapmail.cl`) · teléfono · aceptación de la política de privacidad.
 
-## Arquitectura en Cloudflare
+## Ejecutar con Docker (en tu computador)
+
+Requisito: [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+```bash
+cd evento
+docker compose up -d --build
+docker compose logs app        # muestra el token para crear el primer administrador
+```
+
+- Estudiantes: <http://localhost:8080> · Acreditación: <http://localhost:8080/acreditacion> · Administración: <http://localhost:8080/admin>
+- La primera vez se carga solo el **Mes de la Ciberseguridad** (agenda y talleres).
+- Los datos (base SQLite, fotos y claves) quedan en el volumen `eventos-inacap_datos` y sobreviven a reinicios.
+  Para empezar de cero: `docker compose down -v` (**borra todo**).
+
+**Probar desde teléfonos** (la cámara del acreditador exige HTTPS):
+
+```bash
+TRUST_PROXY=1 docker compose --profile tunel up -d --build
+docker compose logs tunel | grep trycloudflare   # URL https://….trycloudflare.com para abrir en el teléfono
+```
+
+El túnel rápido de Cloudflare sirve para pruebas (dirección aleatoria, sin garantía de disponibilidad).
+
+**Endurecimiento del contenedor:** usuario sin privilegios, sistema de archivos de sólo lectura (salvo el volumen de datos),
+sin capacidades de Linux, `no-new-privileges`, límites de memoria y procesos, puerto publicado sólo en `127.0.0.1`,
+dependencias de producción instaladas sin scripts y chequeo de salud.
+
+Variables opcionales (archivo `.env` junto a `compose.yaml`): `DATA_KEY` y `TOKEN_CONFIGURACION`. Si no se definen,
+se generan una vez y se guardan en el volumen (`/datos/secretos.json`, permisos 600).
+
+Sin Docker: `npm ci && npm start` (Node.js 22.13 o superior).
+
+## Publicar en Cloudflare (opcional)
+
+### Arquitectura
 
 ```
 Navegador ──HTTPS──▶ Worker (src/worker.js)
@@ -27,7 +63,7 @@ Navegador ──HTTPS──▶ Worker (src/worker.js)
 Al crearse por primera vez, el Durable Object carga el evento de `config/mes-ciberseguridad-2026.json`
 (agenda completa y talleres). Después, todo se administra desde `/admin`.
 
-## Despliegue
+### Despliegue
 
 Requisitos de la cuenta de Cloudflare: plan **Workers Paid** (US$5/mes: la protección de contraseñas PBKDF2 necesita
 más de los 10 ms de CPU del plan gratuito) y **R2** activado.
@@ -56,7 +92,7 @@ administrador (el token deja de servir apenas existe uno). En **Usuarios** crea 
 > **DATA_KEY** cifra correos y teléfonos. Es un secreto de Cloudflare (no se puede volver a leer); si se cambia, los
 > datos ya guardados quedan ilegibles. No la cambies con inscripciones en curso.
 
-### Variables y secretos
+#### Variables y secretos
 
 | Nombre | Tipo | Descripción |
 |---|---|---|
@@ -77,7 +113,7 @@ administrador (el token deja de servir apenas existe uno). En **Usuarios** crea 
 ```bash
 cp .dev.vars.example .dev.vars   # completa DATA_KEY y TOKEN_CONFIGURACION
 npm run dev                      # http://localhost:8787
-npm test                         # pruebas unitarias + API contra el runtime real (wrangler dev)
+npm test                         # pruebas unitarias + API contra ambos entornos (Cloudflare y Node/Docker)
 ```
 
 ## Seguridad y protección de datos personales
@@ -115,7 +151,9 @@ Diseñada considerando la Ley N.° 19.628 (y su actualización por la Ley N.° 2
 evento/
 ├── wrangler.jsonc                    # configuración de Cloudflare (Worker, Durable Object, R2)
 ├── config/mes-ciberseguridad-2026.json
+├── Dockerfile · compose.yaml          # ejecución local en Docker
 ├── src/
+│   ├── node/         # servidor Node (Docker): SQLite en disco, fotos en volumen, WebSockets
 │   ├── worker.js     # entrada: frontend, fotos (R2) y derivación de la API
 │   ├── evento.js     # Durable Object: API, permisos por rol, tiempo real
 │   ├── db.js         # esquema y consultas SQLite

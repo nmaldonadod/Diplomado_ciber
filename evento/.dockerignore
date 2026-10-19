@@ -1,0 +1,10 @@
+node_modules
+.wrangler
+.dev.vars
+.env
+datos
+test
+*.md
+Dockerfile
+compose.yaml
+scripts

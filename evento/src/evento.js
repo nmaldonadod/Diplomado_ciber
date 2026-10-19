@@ -1,13 +1,12 @@
-// Durable Object «EventoDO»: un único objeto concentra la base de datos (SQLite), las reglas de
-// negocio (cupos, topes, roles) y el tiempo real (WebSockets con hibernación). Al procesar una
-// petición a la vez, las inscripciones son consistentes aunque cientos de estudiantes elijan a la vez.
-import { DurableObject } from 'cloudflare:workers';
+// «EventoDO»: un único objeto concentra la base de datos (SQLite), las reglas de negocio (cupos,
+// topes, roles) y el tiempo real (WebSockets). En Cloudflare es un Durable Object; en Docker lo
+// hospeda src/node/servidor.js con la misma interfaz (ctx.storage.sql, WebSockets).
 import { crearDB, ErrorNegocio } from './db.js';
 import { json, contexto, leerCookie, cookie, mismoOrigen, leerCuerpo, leerJSON, crearRouter } from './http.js';
 import { extraerIdentidad, PREFIJO_TICKET } from './qr.js';
 import * as seg from './seguridad.js';
 import * as v from './validacion.js';
-import eventoInicial from '../config/mes-ciberseguridad-2026.json';
+import eventoInicial from '../config/mes-ciberseguridad-2026.json' with { type: 'json' };
 
 const SESION = {
   estudianteDias: 30,
@@ -72,9 +71,10 @@ export function validarArchivoEvento(datos) {
   return { evento: evento.datos, agenda, talleres };
 }
 
-export class EventoDO extends DurableObject {
+export class EventoDO {
   constructor(ctx, env) {
-    super(ctx, env);
+    this.ctx = ctx;
+    this.env = env;
     this.limitador = seg.crearLimitador();
     this.router = crearRouter();
     this.ultimaPurga = 0;
@@ -236,8 +236,13 @@ export class EventoDO extends DurableObject {
     if (this.ctx.getWebSockets().length >= MAX_CONEXIONES) return json(503, { error: 'OCUPADO' });
     const [cliente, servidor] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(servidor);
-    servidor.send(JSON.stringify({ tipo: 'cupos', datos: this.db.talleres.cupos() }));
+    servidor.send(this.mensajeInicial());
     return new Response(null, { status: 101, webSocket: cliente });
+  }
+
+  // Estado que recibe cada cliente al conectarse en tiempo real.
+  mensajeInicial() {
+    return JSON.stringify({ tipo: 'cupos', datos: this.db.talleres.cupos() });
   }
 
   webSocketMessage() {

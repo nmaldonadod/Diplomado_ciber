@@ -1,37 +1,12 @@
 // Utilidades de prueba.
-import { DatabaseSync } from 'node:sqlite';
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
 
-// Imita ctx.storage de un Durable Object (sql.exec + transactionSync) sobre node:sqlite.
-export function almacenamientoFalso() {
-  const db = new DatabaseSync(':memory:');
-  db.exec('PRAGMA foreign_keys = ON');
-  return {
-    db,
-    sql: {
-      exec(q, ...args) {
-        const st = db.prepare(q);
-        const filas = st.columns().length ? st.all(...args) : (st.run(...args), []);
-        return { toArray: () => filas, one: () => filas[0] };
-      },
-    },
-    transactionSync(fn) {
-      db.exec('BEGIN');
-      try {
-        const r = fn();
-        db.exec('COMMIT');
-        return r;
-      } catch (e) {
-        db.exec('ROLLBACK');
-        throw e;
-      }
-    },
-  };
-}
+// La base de datos de prueba usa el mismo adaptador que el servidor Node.
+export { almacenamientoSqlite as almacenamientoFalso } from '../src/node/plataforma.js';
 
 function puertoLibre() {
   return new Promise((ok) => {
@@ -79,6 +54,37 @@ export async function levantarWorker(vars = {}) {
     },
   };
 }
+
+// Levanta el servidor Node (el mismo que corre en Docker) con una base de datos nueva.
+export async function levantarNode(vars = {}) {
+  const puerto = await puertoLibre();
+  const dir = mkdtempSync(path.join(tmpdir(), 'evento-node-'));
+  const raiz = path.resolve(import.meta.dirname, '..');
+  const proc = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', path.join(raiz, 'src', 'node', 'servidor.js')], {
+    cwd: raiz, env: { ...process.env, PORT: String(puerto), HOST: '127.0.0.1', DATA_DIR: dir, EVENTO_INICIAL: 'no', ITERACIONES_CLAVE: '20000', ...vars },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let log = '';
+  proc.stdout.on('data', (d) => (log += d));
+  proc.stderr.on('data', (d) => (log += d));
+  for (let i = 0; i < 80 && !/escuchando/.test(log); i++) {
+    if (proc.exitCode !== null) throw new Error('el servidor terminó:\n' + log);
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  if (!/escuchando/.test(log)) throw new Error('el servidor no inició:\n' + log);
+  return {
+    base: `http://127.0.0.1:${puerto}`,
+    async cerrar() {
+      const fin = new Promise((r) => (proc.exitCode !== null ? r() : proc.once('exit', r)));
+      proc.kill('SIGTERM');
+      await fin;
+      rmSync(dir, { recursive: true, force: true });
+    },
+  };
+}
+
+// RUNTIME=node prueba el servidor de Docker; por defecto, el Worker de Cloudflare.
+export const levantarApp = (vars) => (process.env.RUNTIME === 'node' ? levantarNode(vars) : levantarWorker(vars));
 
 // Cliente HTTP con cookies propias (simula un navegador).
 export function cliente(base) {
