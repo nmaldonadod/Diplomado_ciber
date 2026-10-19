@@ -398,7 +398,7 @@ async function detalleEstudiante(id, alCambiar) {
 
   // el() descarta los valores false de los elementos condicionales.
   const cont = el('div', null,
-    el('p', null, el('strong', null, e.email), el('br'), el('span', { class: 'sub' }, `${e.telefono} · ${e.sede}`)),
+    el('p', null, el('strong', null, e.email), el('br'), el('span', { class: 'sub' }, [e.rut, e.telefono, e.sede].filter(Boolean).join(' · '))),
     el('p', { class: 'sub', style: { fontSize: '.84rem' } },
       `Inscrito: ${new Date(e.creadoEn).toLocaleString('es-CL')} (${e.origen}) · Consentimiento: ${e.consentimientoEn ? new Date(e.consentimientoEn).toLocaleString('es-CL') : '—'}`),
     el('p', null, e.acreditadoEn ? el('span', { class: 'chip ok' }, `✓ Acreditado ${new Date(e.acreditadoEn).toLocaleString('es-CL')}`) : el('span', { class: 'chip alerta' }, 'No acreditado')),
@@ -424,16 +424,6 @@ async function detalleEstudiante(id, alCambiar) {
         ? el('button', { class: 'btn btn-contorno btn-chico', type: 'button', onclick: accion(async () => { await llamar('DELETE', `/api/acreditacion/${id}`); recargar(); }) }, 'Deshacer acreditación')
         : el('button', { class: 'btn btn-exito btn-chico', type: 'button', onclick: accion(async () => { await llamar('POST', '/api/acreditacion/acreditar', { id }); recargar(); }) }, 'Acreditar'),
       el('button', {
-        class: 'btn btn-contorno btn-chico', type: 'button',
-        onclick: accion(async () => {
-          if (!confirm('¿Generar un nuevo código de acceso? El anterior dejará de funcionar y se cerrarán sus sesiones.')) return;
-          const r = await llamar('POST', `/api/admin/estudiantes/${id}/codigo-acceso`);
-          modal('Nuevo código de acceso', el('div', null,
-            el('p', null, `Entrégalo personalmente a ${nombreDe(e)} (verifica su identidad). No se volverá a mostrar.`),
-            el('div', { class: 'codigo-acceso' }, r.codigoAcceso)));
-        }),
-      }, 'Nuevo código de acceso'),
-      el('button', {
         class: 'btn btn-contorno btn-chico', type: 'button', style: { color: 'var(--peligro)' },
         onclick: accion(async () => {
           if (!confirm(`¿Eliminar definitivamente a ${nombreDe(e)} y todos sus datos? Esta acción no se puede deshacer.`)) return;
@@ -447,7 +437,7 @@ async function detalleEstudiante(id, alCambiar) {
 }
 
 async function vistaEstudiantes() {
-  const q = el('input', { type: 'search', placeholder: 'Nombre, apellido o INACAPMAIL completo', 'aria-label': 'Buscar', maxlength: 80 });
+  const q = el('input', { type: 'search', placeholder: 'Nombre, apellido, RUT o INACAPMAIL completo', 'aria-label': 'Buscar', maxlength: 80 });
   const sede = el('select', { 'aria-label': 'Sede' }, el('option', { value: '' }, 'Todas las sedes'), adm.sedes.map((s) => el('option', { value: s }, s)));
   const estado = el('select', { 'aria-label': 'Estado' },
     el('option', { value: '' }, 'Todos'), el('option', { value: 'acreditados' }, 'Acreditados'), el('option', { value: 'pendientes' }, 'No acreditados'));
@@ -461,7 +451,7 @@ async function vistaEstudiantes() {
       lista.replaceChildren(
         el('p', { class: 'sub', style: { marginBottom: '6px' } }, `${r.total} estudiante(s)`),
         ...r.filas.map((e) => el('div', { class: 'fila' },
-          el('div', { class: 'q' }, el('strong', null, nombreDe(e)), el('span', null, `${e.sede} · ${e.email}`),
+          el('div', { class: 'q' }, el('strong', null, nombreDe(e)), el('span', null, [e.rut, e.sede, e.email].filter(Boolean).join(' · ')),
             el('span', { style: { display: 'block' } }, e.talleres.length ? e.talleres.map((t) => t.titulo).join(', ') : 'Sin talleres')),
           el('div', { class: 'btns' },
             e.acreditadoEn ? el('span', { class: 'chip ok' }, '✓ Acreditado') : el('span', { class: 'chip' }, 'Pendiente'),

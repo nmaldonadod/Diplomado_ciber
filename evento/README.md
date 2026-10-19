@@ -10,8 +10,11 @@ Tiene **tres interfaces**, cada una con sus propios permisos:
 | **Acreditador** | `/acreditacion` | Cuentas con rol *acreditador* (o *admin*) | Escanea el QR de la entrada con la cámara del teléfono, busca estudiantes e inscribe presencialmente |
 | **Administrador** | `/admin` | Cuentas con rol *admin* | Configura el evento, crea talleres (título, descripción, cupos, horario, sala, **foto del docente**), arma la agenda, importa cambios desde un archivo, gestiona estudiantes y cuentas, exporta y revisa la auditoría |
 
-Datos que se piden al estudiante: nombres · apellidos · sede (Santiago Centro, Santiago Sur, Rancagua, Talca, Curicó,
-Apoquindo, Valparaíso) · INACAPMAIL (sólo `@inacapmail.cl`) · teléfono · aceptación de la política de privacidad.
+Datos que se piden al estudiante, en este orden: nombres · apellidos · RUT (con dígito verificador) · teléfono ·
+INACAPMAIL (sólo `@inacapmail.cl`) · sede (Santiago Centro, Santiago Sur, Rancagua, Talca, Curicó, Apoquindo, Valparaíso).
+Luego un **resumen para revisar y confirmar**, con la aceptación de la política de privacidad. Si cambia de teléfono,
+el estudiante **recupera su entrada con RUT + INACAPMAIL + sede**. En la acreditación se lee el QR de la entrada o el
+**QR de la cédula de identidad**.
 
 ## Ejecutar con Docker (en tu computador)
 
@@ -121,17 +124,18 @@ npm test                         # pruebas unitarias + API contra ambos entornos
 Diseñada considerando la Ley N.° 19.628 (y su actualización por la Ley N.° 21.719) y las recomendaciones OWASP.
 
 **Datos personales**
-- Minimización: sólo los datos necesarios (sin RUT ni fotos de estudiantes).
-- Correo y teléfono **cifrados** (AES-256-GCM, claves derivadas con HKDF); búsqueda por correo mediante índice ciego HMAC.
+- Minimización: sólo los datos necesarios (sin fotos ni datos sensibles de estudiantes).
+- RUT, correo y teléfono **cifrados** (AES-256-GCM, claves derivadas con HKDF); búsqueda por RUT o correo mediante índices ciegos HMAC.
 - Consentimiento explícito con fecha registrada y política de privacidad pública (`/privacidad`).
-- Acceso según rol: el acreditador ve nombre, sede, talleres y el correo parcialmente oculto; **no** ve teléfonos ni exporta.
+- Acceso según rol: el acreditador ve nombre, sede, talleres, y RUT y correo parcialmente ocultos; **no** ve teléfonos ni exporta.
 - El administrador puede eliminar a un estudiante o **todos los datos** al terminar el evento (con confirmación y contraseña).
 - Exportaciones CSV auditadas y protegidas contra inyección de fórmulas.
 
 **Autenticación y sesiones**
 - Staff: contraseñas de 12+ caracteres con **PBKDF2-SHA256 (600.000 iteraciones)**, bloqueo progresivo tras 5 intentos,
   mensajes que no revelan si una cuenta existe.
-- Estudiantes: INACAPMAIL + **código de acceso** aleatorio entregado una sola vez (HMAC con clave secreta), bloqueo tras 5 intentos.
+- Estudiantes: recuperan su entrada con RUT + INACAPMAIL + sede (deben coincidir los tres), con límite por IP y bloqueo
+  de 15 minutos tras 5 intentos fallidos; cada recuperación queda auditada.
 - Sesiones en el servidor (token de 256 bits guardado como hash), cookies `HttpOnly`, `Secure`, prefijo `__Host-`,
   `SameSite=Strict` para el staff; expiración por inactividad (admin 60 min, acreditador 3 h) y absoluta.
 

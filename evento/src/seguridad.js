@@ -65,8 +65,7 @@ export async function sha256(texto) {
 
 // A partir de la clave maestra (32 bytes en base64) se derivan claves independientes con HKDF:
 //  - AES-256-GCM para correo y teléfono
-//  - HMAC para el índice ciego del correo (búsqueda exacta sin guardarlo en claro)
-//  - HMAC para los códigos de acceso de estudiantes (secretos aleatorios de 40 bits)
+//  - HMAC para los índices ciegos de correo y RUT (búsqueda exacta sin guardarlos en claro)
 export async function crearCifrador(claveMaestraB64) {
   const maestra = deB64(String(claveMaestraB64 || ''));
   if (maestra.length !== 32) throw new Error('DATA_KEY debe ser de 32 bytes en base64 (openssl rand -base64 32).');
@@ -75,7 +74,6 @@ export async function crearCifrador(claveMaestraB64) {
     { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: enc.encode(info) }, ikm, alg, false, usos);
   const kCifrado = await derivar('evento:cifrado:v1', { name: 'AES-GCM', length: 256 }, ['encrypt', 'decrypt']);
   const kIndice = await derivar('evento:indice:v1', { name: 'HMAC', hash: 'SHA-256', length: 256 }, ['sign']);
-  const kCodigo = await derivar('evento:codigo-acceso:v1', { name: 'HMAC', hash: 'SHA-256', length: 256 }, ['sign']);
 
   return {
     async cifrar(texto) {
@@ -93,7 +91,6 @@ export async function crearCifrador(claveMaestraB64) {
       return dec.decode(await subtle.decrypt({ name: 'AES-GCM', iv: b.subarray(0, 12) }, kCifrado, b.subarray(12)));
     },
     indice: async (texto) => aHex(await subtle.sign('HMAC', kIndice, enc.encode(String(texto).toLowerCase()))),
-    hashCodigo: async (codigo) => 'hmac$' + aHex(await subtle.sign('HMAC', kCodigo, enc.encode(String(codigo).toUpperCase()))),
   };
 }
 

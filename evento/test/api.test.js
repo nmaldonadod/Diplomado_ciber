@@ -10,7 +10,7 @@ const DATA_KEY = Buffer.alloc(32, 9).toString('base64');
 
 const levantar = () => levantarApp({ TOKEN_CONFIGURACION: TOKEN, DATA_KEY });
 
-const ESTUDIANTE = { nombres: 'Ana', apellidos: 'Pérez Soto', sede: 'Rancagua', email: 'ana.perez@inacapmail.cl', telefono: '9 1234 5678', consentimiento: true };
+const ESTUDIANTE = { nombres: 'Ana', apellidos: 'Pérez Soto', rut: '12.345.678-5', sede: 'Rancagua', email: 'ana.perez@inacapmail.cl', telefono: '9 1234 5678', consentimiento: true };
 
 async function prepararAdmin(base) {
   const admin = cliente(base);
@@ -77,26 +77,33 @@ test('flujo completo: admin configura → estudiante se inscribe con taller → 
   assert.equal(r.status, 201);
   assert.deepEqual(r.body.perfil.talleres, [tallerId]);
   assert.equal(r.body.rechazados.length, 1, 'el borrador no se puede elegir');
-  assert.match(r.body.codigoAcceso, /^[A-Z2-9]{8}$/);
-  const codigoAcceso = r.body.codigoAcceso;
+  assert.equal(r.body.perfil.rut, '12.345.678-5');
   const ticket = r.body.perfil.qr;
   assert.equal(r.body.perfil.telefono, '+56912345678');
 
   r = await anon('POST', '/api/registro', { ...ESTUDIANTE, email: 'ANA.PEREZ@inacapmail.cl' });
   assert.equal(r.body.error, 'YA_REGISTRADO');
+  r = await anon('POST', '/api/registro', { ...ESTUDIANTE, email: 'otra@inacapmail.cl', rut: '123456785' });
+  assert.equal(r.body.error, 'YA_REGISTRADO', 'un RUT no se puede inscribir dos veces');
+  r = await anon('POST', '/api/registro', { ...ESTUDIANTE, email: 'otra@inacapmail.cl', rut: '12.345.678-9' });
+  assert.ok(r.body.errores?.rut, 'valida el dígito verificador');
 
   // Otro estudiante: el taller quedó sin cupos.
   const beto = cliente(srv.base);
-  r = await beto('POST', '/api/registro', { ...ESTUDIANTE, nombres: 'Beto', email: 'beto@inacapmail.cl' });
+  r = await beto('POST', '/api/registro', { ...ESTUDIANTE, nombres: 'Beto', rut: '11.111.111-1', email: 'beto@inacapmail.cl' });
   r = await beto('POST', `/api/talleres/${tallerId}/inscripcion`, {});
   assert.equal(r.body.error, 'SIN_CUPOS');
 
-  // Acceso desde otro dispositivo con correo + código.
+  // Recuperar la entrada desde otro dispositivo con RUT + correo + sede.
   const otroDispositivo = cliente(srv.base);
-  r = await otroDispositivo('POST', '/api/acceso', { email: ESTUDIANTE.email, codigo: 'AAAAAAAA' });
-  assert.equal(r.status, 401);
-  r = await otroDispositivo('POST', '/api/acceso', { email: ESTUDIANTE.email, codigo: codigoAcceso.toLowerCase() });
+  r = await otroDispositivo('POST', '/api/recuperar', { rut: '12.345.678-5', email: ESTUDIANTE.email, sede: 'Talca' });
+  assert.equal(r.status, 401, 'la sede debe coincidir');
+  r = await otroDispositivo('POST', '/api/recuperar', { rut: '12.345.678-5', email: 'beto@inacapmail.cl', sede: 'Rancagua' });
+  assert.equal(r.status, 401, 'el correo debe ser el de esa inscripción');
+  r = await otroDispositivo('POST', '/api/recuperar', { rut: '12345678-5', email: 'ANA.PEREZ@inacapmail.cl', sede: 'Rancagua' });
   assert.equal(r.status, 200);
+  assert.equal(r.body.qr, ticket, 'recupera la misma entrada');
+  assert.equal((await otroDispositivo('GET', '/api/yo')).body.nombres, 'Ana');
 
   // El estudiante no puede usar la API de staff.
   r = await ana('GET', '/api/admin/estudiantes');
@@ -124,15 +131,23 @@ test('flujo completo: admin configura → estudiante se inscribe con taller → 
   assert.equal(r.body.estudiante.talleres[0].titulo, 'Robótica');
   assert.equal(r.body.estudiante.telefono, undefined, 'el acreditador no ve teléfonos');
   assert.match(r.body.estudiante.email, /^an•+@inacapmail\.cl$/, 'correo enmascarado');
+  assert.match(r.body.estudiante.rut, /^[•.]+5\.678-5$/, 'RUT enmascarado');
 
+  r = await acr('POST', '/api/acreditacion/acreditar', { texto: 'https://portal.sidiv.registrocivil.cl/docstatus?RUN=12345678-5&type=CEDULA&serial=1' });
+  assert.equal(r.body.resultado, 'YA_ACREDITADO', 'reconoce el QR de la cédula');
   r = await acr('POST', '/api/acreditacion/acreditar', { texto: 'ana.perez@inacapmail.cl' });
   assert.equal(r.body.resultado, 'YA_ACREDITADO');
   r = await acr('POST', '/api/acreditacion/acreditar', { texto: 'nadie@inacapmail.cl' });
-  assert.deepEqual(r.body, { resultado: 'NO_REGISTRADO', email: 'nadie@inacapmail.cl' });
+  assert.deepEqual(r.body, { resultado: 'NO_REGISTRADO', email: 'nadie@inacapmail.cl', rut: null });
+  r = await acr('POST', '/api/acreditacion/acreditar', { texto: '22.222.222-2' });
+  assert.deepEqual(r.body, { resultado: 'NO_REGISTRADO', email: null, rut: '22.222.222-2' });
 
-  r = await acr('POST', '/api/acreditacion/registro-presencial', { ...ESTUDIANTE, nombres: 'Carla', email: 'carla@inacapmail.cl' });
+  r = await acr('POST', '/api/acreditacion/registro-presencial', { ...ESTUDIANTE, nombres: 'Carla', rut: '22.222.222-2', email: 'carla@inacapmail.cl' });
   assert.equal(r.status, 201);
-  assert.match(r.body.codigoAcceso, /^[A-Z2-9]{8}$/);
+  assert.equal(r.body.codigoAcceso, undefined);
+
+  r = await acr('GET', '/api/acreditacion/buscar?q=11.111.111-1');
+  assert.deepEqual(r.body.map((e) => e.nombres), ['Beto'], 'busca por RUT exacto');
 
   r = await acr('GET', '/api/acreditacion/buscar?q=perez');
   assert.equal(r.body.length, 3);
@@ -143,7 +158,7 @@ test('flujo completo: admin configura → estudiante se inscribe con taller → 
   assert.equal(r.body.filas[0].telefono, '+56912345678');
   r = await admin('GET', '/api/admin/exportar/estudiantes.csv');
   assert.match(r.headers.get('content-type'), /text\/csv/);
-  assert.match(r.body, /Ana;Pérez Soto;Rancagua;ana\.perez@inacapmail\.cl;912345678;/);
+  assert.match(r.body, /Ana;Pérez Soto;12\.345\.678-5;Rancagua;ana\.perez@inacapmail\.cl;912345678;/);
   r = await admin('GET', '/api/admin/auditoria');
   const acciones = r.body.map((a) => a.accion);
   for (const a of ['configuracion_inicial', 'login', 'taller_creado', 'acreditar', 'registro_presencial', 'exportar_estudiantes', 'acceso_denegado']) {
@@ -209,9 +224,9 @@ test('seguridad: CSRF, cabeceras, archivos, bloqueo de cuentas y límites', asyn
   const est = cliente(srv.base);
   await est('POST', '/api/registro', ESTUDIANTE);
   const atacante = cliente(srv.base);
-  for (let i = 0; i < 5; i++) await atacante('POST', '/api/acceso', { email: ESTUDIANTE.email, codigo: 'ZZZZZZZZ' });
-  r = await atacante('POST', '/api/acceso', { email: ESTUDIANTE.email, codigo: 'ZZZZZZZZ' });
-  assert.equal(r.body.error, 'BLOQUEADO');
+  for (let i = 0; i < 5; i++) await atacante('POST', '/api/recuperar', { rut: ESTUDIANTE.rut, email: ESTUDIANTE.email, sede: 'Talca' });
+  r = await atacante('POST', '/api/recuperar', { rut: ESTUDIANTE.rut, email: ESTUDIANTE.email, sede: ESTUDIANTE.sede });
+  assert.equal(r.body.error, 'BLOQUEADO', 'tras 5 intentos fallidos se bloquea aunque los datos sean correctos');
 
   // Los errores internos no exponen detalles.
   r = await c('GET', '/api/admin/talleres/abc/inscritos');

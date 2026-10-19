@@ -1,3 +1,5 @@
+import { normalizarRut } from './rut.js';
+
 const SEDES = ['Santiago Centro', 'Santiago Sur', 'Rancagua', 'Talca', 'Curicó', 'Apoquindo', 'Valparaíso'];
 const DOMINIO_CORREO = 'inacapmail.cl';
 const TIPOS_AGENDA = ['charla', 'pausa', 'acreditacion', 'actividad'];
@@ -50,13 +52,15 @@ function validarRegistro(b) {
   const apellidos = linea(b.apellidos, 60);
   if (nombres.length < 2 || !RE_NOMBRE.test(nombres)) errores.nombres = 'Ingresa tus nombres (sólo letras).';
   if (apellidos.length < 2 || !RE_NOMBRE.test(apellidos)) errores.apellidos = 'Ingresa tus apellidos (sólo letras).';
+  const rut = normalizarRut(b.rut);
+  if (!rut) errores.rut = 'RUT inválido. Revisa el dígito verificador.';
   const sede = SEDES.includes(b.sede) ? b.sede : null;
   if (!sede) errores.sede = 'Selecciona tu sede.';
   const email = correoInstitucional(b.email);
   if (!email) errores.email = `Usa tu correo institucional @${DOMINIO_CORREO}.`;
   const telefono = telefonoChile(b.telefono);
   if (!telefono) errores.telefono = 'Ingresa un teléfono válido (ej: 9 1234 5678).';
-  return { errores, datos: { nombres, apellidos, sede, email, telefono } };
+  return { errores, datos: { nombres, apellidos, rut, sede, email, telefono } };
 }
 
 function validarTaller(b) {

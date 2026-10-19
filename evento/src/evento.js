@@ -6,6 +6,7 @@ import { json, contexto, leerCookie, cookie, mismoOrigen, leerCuerpo, leerJSON, 
 import { extraerIdentidad, PREFIJO_TICKET } from './qr.js';
 import * as seg from './seguridad.js';
 import * as v from './validacion.js';
+import { normalizarRut, formatearRut, enmascararRut } from './rut.js';
 import eventoInicial from '../config/mes-ciberseguridad-2026.json' with { type: 'json' };
 
 const SESION = {
@@ -109,11 +110,34 @@ export class EventoDO {
     this.db.auditoria.registrar(actor, accion, detalle, c.ip);
   }
 
-  // Descifra correo y teléfono de una fila de estudiante.
+  // Descifra RUT, correo y teléfono de una fila de estudiante.
   async hidratar(e) {
     if (!e) return e;
     const cif = await this.cifrador();
-    return { ...e, email: await cif.descifrar(e.email_cif), telefono: await cif.descifrar(e.telefono_cif) };
+    return {
+      ...e,
+      email: await cif.descifrar(e.email_cif),
+      telefono: await cif.descifrar(e.telefono_cif),
+      rut: e.rut_cif ? await cif.descifrar(e.rut_cif) : null,
+    };
+  }
+
+  // Índice ciego del RUT (separado del índice de correos con un prefijo propio).
+  async indiceRut(rut) {
+    return (await this.cifrador()).indice('rut:' + rut);
+  }
+
+  // Cifra los datos personales de un registro antes de guardarlo.
+  async datosCifrados(datos) {
+    const cif = await this.cifrador();
+    return {
+      ...datos,
+      email_cif: await cif.cifrar(datos.email),
+      email_idx: await cif.indice(datos.email),
+      rut_cif: await cif.cifrar(datos.rut),
+      rut_idx: await this.indiceRut(datos.rut),
+      telefono_cif: await cif.cifrar(datos.telefono),
+    };
   }
 
   hidratarTodos(filas) {
@@ -122,7 +146,7 @@ export class EventoDO {
 
   perfil(e) {
     return {
-      nombres: e.nombres, apellidos: e.apellidos, sede: e.sede, email: e.email, telefono: e.telefono,
+      nombres: e.nombres, apellidos: e.apellidos, rut: formatearRut(e.rut), sede: e.sede, email: e.email, telefono: e.telefono,
       codigo: e.codigo, qr: PREFIJO_TICKET + e.codigo, acreditadoEn: e.acreditado_en,
       talleres: this.db.inscripciones.de(e.id).map((t) => t.id),
     };
@@ -131,14 +155,14 @@ export class EventoDO {
   // Lo que ve el acreditador: lo mínimo para identificar y orientar al estudiante.
   fichaAcreditador(e) {
     return {
-      id: e.id, nombres: e.nombres, apellidos: e.apellidos, sede: e.sede, email: enmascararEmail(e.email),
+      id: e.id, nombres: e.nombres, apellidos: e.apellidos, rut: enmascararRut(e.rut), sede: e.sede, email: enmascararEmail(e.email),
       acreditadoEn: e.acreditado_en, talleres: this.db.inscripciones.de(e.id),
     };
   }
 
   fichaAdmin(e) {
     return {
-      ...this.fichaAcreditador(e), email: e.email, telefono: e.telefono, origen: e.origen,
+      ...this.fichaAcreditador(e), rut: formatearRut(e.rut), email: e.email, telefono: e.telefono, origen: e.origen,
       creadoEn: e.creado_en, consentimientoEn: e.consentimiento_en,
     };
   }
@@ -326,14 +350,7 @@ export class EventoDO {
       if (b.consentimiento !== true) errores.consentimiento = 'Debes aceptar el tratamiento de tus datos para inscribirte.';
       if (v.hayErrores(errores)) throw errValidacion(errores);
 
-      const cif = await this.cifrador();
-      const codigoAcceso = seg.codigoAleatorio(8);
-      const fila = db().estudiantes.crear({
-        ...datos,
-        email_cif: await cif.cifrar(datos.email),
-        email_idx: await cif.indice(datos.email),
-        telefono_cif: await cif.cifrar(datos.telefono),
-      }, await cif.hashCodigo(codigoAcceso), 'web');
+      const fila = db().estudiantes.crear(await this.datosCifrados(datos), '', 'web');
       this.audit(c, `estudiante:${fila.id}`, 'registro', null);
 
       // Talleres elegidos en el mismo formulario (opcional). Si alguno falla, la inscripción al evento igual queda hecha.
@@ -349,27 +366,31 @@ export class EventoDO {
       }
       if (pedidos.length) this.emitirCupos();
       const est = await this.hidratar(fila);
-      return json(201, { perfil: this.perfil(est), codigoAcceso, rechazados }, await this.abrirSesionEstudiante(c, est));
+      return json(201, { perfil: this.perfil(est), rechazados }, await this.abrirSesionEstudiante(c, est));
     });
 
-    R('POST', '/api/acceso', async (c) => {
-      this.limitar('acceso:' + c.ip, 30, 10 * 60_000);
+    // Recuperar la entrada en otro dispositivo: RUT + INACAPMAIL + sede deben coincidir con la inscripción.
+    R('POST', '/api/recuperar', async (c) => {
+      this.limitar('recuperar:' + c.ip, 20, 10 * 60_000);
       const b = await leerJSON(c.req);
+      const rut = normalizarRut(b.rut);
+      if (!rut) throw errValidacion({ rut: 'RUT inválido. Revisa el dígito verificador.' });
       const cif = await this.cifrador();
-      const email = v.correoInstitucional(b.email);
-      const codigo = String(b.codigo || '').toUpperCase().replace(/[\s-]/g, '').slice(0, 16);
-      const fila = email ? db().estudiantes.porEmailIdx(await cif.indice(email)) : null;
-      const esperado = await cif.hashCodigo(codigo);
-      const noValido = () => fallo('ACCESO_INVALIDO', 'Correo o código de acceso incorrecto.', 401);
-      if (!fila) throw noValido();
+      const email = v.correoInstitucional(b.email) || '';
+      const sede = v.SEDES.includes(b.sede) ? b.sede : '';
+      const fila = db().estudiantes.porRutIdx(await this.indiceRut(rut));
+      const noCoincide = () => fallo('NO_COINCIDE', 'Los datos no coinciden con ninguna inscripción. Revisa tu RUT, correo y sede.', 401);
+      if (!fila) throw noCoincide();
       if (fila.acceso_bloqueado_hasta && Date.parse(fila.acceso_bloqueado_hasta) > Date.now()) {
         throw fallo('BLOQUEADO', 'Demasiados intentos fallidos. Intenta en 15 minutos o pide ayuda en la acreditación.', 429);
       }
-      if (!seg.iguales(esperado, fila.acceso_hash)) {
+      const correoOk = seg.iguales(await cif.indice(email), fila.email_idx);
+      if (!correoOk || sede !== fila.sede) {
         db().estudiantes.registrarFalloAcceso(fila.id);
-        throw noValido();
+        throw noCoincide();
       }
       db().estudiantes.accesoCorrecto(fila.id);
+      this.audit(c, `estudiante:${fila.id}`, 'recuperacion_entrada', null);
       const est = await this.hidratar(fila);
       return json(200, this.perfil(est), await this.abrirSesionEstudiante(c, est));
     });
@@ -481,11 +502,11 @@ export class EventoDO {
       } else {
         const ident = extraerIdentidad(b.texto);
         if (!ident) return json(200, { resultado: 'NO_RECONOCIDO' });
-        fuente = ident.tipo;
-        fila = ident.tipo === 'ticket'
-          ? db().estudiantes.porCodigo(ident.codigo)
-          : db().estudiantes.porEmailIdx(await (await this.cifrador()).indice(ident.email));
-        if (!fila) return json(200, { resultado: 'NO_REGISTRADO', email: ident.email || null });
+        if (ident.tipo === 'ticket') fila = db().estudiantes.porCodigo(ident.codigo);
+        else if (ident.tipo === 'rut') fila = db().estudiantes.porRutIdx(await this.indiceRut(ident.rut));
+        else fila = db().estudiantes.porEmailIdx(await (await this.cifrador()).indice(ident.email));
+        fuente = ident.fuente || ident.tipo;
+        if (!fila) return json(200, { resultado: 'NO_REGISTRADO', email: ident.email || null, rut: ident.rut ? formatearRut(ident.rut) : null });
       }
       if (!fila) throw fallo('NO_ENCONTRADO', 'Estudiante no encontrado.', 404);
       const nuevo = db().estudiantes.acreditar(fila.id, u.id);
@@ -508,7 +529,9 @@ export class EventoDO {
       const email = q.includes('@') ? v.correoInstitucional(q) : null;
       const emailIdx = email ? await (await this.cifrador()).indice(email) : null;
       if (q.includes('@') && !email) return json(200, []);
-      const filas = await this.hidratarTodos(db().estudiantes.buscar({ q, emailIdx, limite: 25 }).filas);
+      const rut = !email && /^[\d.\s-]+[\dkK]$/.test(q) ? normalizarRut(q) : null;
+      const rutIdx = rut ? await this.indiceRut(rut) : null;
+      const filas = await this.hidratarTodos(db().estudiantes.buscar({ q, emailIdx, rutIdx, limite: 25 }).filas);
       return json(200, filas.map((e) => this.fichaAcreditador(e)));
     }, ACRED);
 
@@ -522,18 +545,11 @@ export class EventoDO {
       const { errores, datos } = v.validarRegistro(b);
       if (b.consentimiento !== true) errores.consentimiento = 'Confirma que el estudiante aceptó el tratamiento de sus datos.';
       if (v.hayErrores(errores)) throw errValidacion(errores);
-      const cif = await this.cifrador();
-      const codigoAcceso = seg.codigoAleatorio(8);
-      const fila = db().estudiantes.crear({
-        ...datos,
-        email_cif: await cif.cifrar(datos.email),
-        email_idx: await cif.indice(datos.email),
-        telefono_cif: await cif.cifrar(datos.telefono),
-      }, await cif.hashCodigo(codigoAcceso), 'presencial');
+      const fila = db().estudiantes.crear(await this.datosCifrados(datos), '', 'presencial');
       db().estudiantes.acreditar(fila.id, u.id);
       this.audit(c, actorDe(u), 'registro_presencial', `estudiante:${fila.id}`);
       const est = await this.hidratar(db().estudiantes.porId(fila.id));
-      return json(201, { resultado: 'ACREDITADO', codigoAcceso, estudiante: this.fichaAcreditador(est) });
+      return json(201, { resultado: 'ACREDITADO', estudiante: this.fichaAcreditador(est) });
     }, ACRED);
 
     // ----- administración: evento -----
@@ -670,6 +686,7 @@ export class EventoDO {
       const r = db().estudiantes.buscar({
         q: q.includes('@') ? '' : q,
         emailIdx: email ? await (await this.cifrador()).indice(email) : q.includes('@') ? 'sin-coincidencias' : null,
+        rutIdx: !q.includes('@') && /^[\d.\s-]+[\dkK]$/.test(q) && normalizarRut(q) ? await this.indiceRut(normalizarRut(q)) : null,
         sede: v.SEDES.includes(s.get('sede')) ? s.get('sede') : '',
         estado: s.get('estado') || '', limite: 50, desde: Number(s.get('desde')) || 0,
       });
@@ -689,16 +706,6 @@ export class EventoDO {
       this.audit(c, actorDe(u), 'estudiante_eliminado', `estudiante:${eid}`);
       this.emitirCupos();
       return json(200, { ok: true });
-    }, ADMIN);
-
-    R('POST', '/api/admin/estudiantes/:id/codigo-acceso', async (c, p, u) => {
-      const eid = id(p.id);
-      if (!db().estudiantes.porId(eid)) throw fallo('NO_ENCONTRADO', 'Estudiante no encontrado.', 404);
-      const codigoAcceso = seg.codigoAleatorio(8);
-      db().estudiantes.cambiarAcceso(eid, await (await this.cifrador()).hashCodigo(codigoAcceso));
-      db().sesiones.cerrarTodasEstudiante(eid);
-      this.audit(c, actorDe(u), 'codigo_acceso_regenerado', `estudiante:${eid}`);
-      return json(200, { codigoAcceso });
     }, ADMIN);
 
     R('POST', '/api/admin/estudiantes/:id/talleres/:tid', async (c, p, u) => {
@@ -787,7 +794,7 @@ export class EventoDO {
       this.audit(c, actorDe(u), 'exportar_estudiantes', null);
       const filas = await this.hidratarTodos(db().estudiantes.todos());
       const cuerpo = csv(filas, [
-        ['Nombres', (f) => f.nombres], ['Apellidos', (f) => f.apellidos], ['Sede', (f) => f.sede],
+        ['Nombres', (f) => f.nombres], ['Apellidos', (f) => f.apellidos], ['RUT', (f) => formatearRut(f.rut)], ['Sede', (f) => f.sede],
         ['INACAPMAIL', (f) => f.email], ['Teléfono', (f) => telefonoLocal(f.telefono)], ['Origen', (f) => f.origen],
         ['Inscrito', (f) => f.creado_en], ['Acreditado', (f) => f.acreditado_en],
         ['Talleres', (f) => db().inscripciones.de(f.id).map((t) => t.titulo).join(' | ')],
@@ -800,7 +807,7 @@ export class EventoDO {
       const filas = await this.hidratarTodos(db().inscripciones.todas());
       const cuerpo = csv(filas, [
         ['Taller', (f) => f.titulo], ['Inicio', (f) => f.inicio], ['Sala', (f) => f.sala],
-        ['Nombres', (f) => f.nombres], ['Apellidos', (f) => f.apellidos], ['Sede', (f) => f.sede],
+        ['Nombres', (f) => f.nombres], ['Apellidos', (f) => f.apellidos], ['RUT', (f) => formatearRut(f.rut)], ['Sede', (f) => f.sede],
         ['INACAPMAIL', (f) => f.email], ['Teléfono', (f) => telefonoLocal(f.telefono)], ['Acreditado', (f) => f.acreditado_en],
       ]);
       return new Response(cuerpo, { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Disposition': 'attachment; filename="inscripciones-talleres.csv"' } });

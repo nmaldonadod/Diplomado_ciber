@@ -60,6 +60,28 @@ function horaReal(isoUtc) {
 
 const RE_INACAPMAIL = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?@inacapmail\.cl$/i;
 const correoValido = (v) => RE_INACAPMAIL.test(String(v).trim()) && !String(v).includes('..');
+// Formatea un RUT a medida que se escribe: 12.345.678-5
+function formatearRutInput(valor) {
+  const limpio = String(valor).replace(/[^0-9kK]/g, '').toUpperCase().slice(0, 9);
+  if (limpio.length < 2) return limpio;
+  return `${limpio.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}-${limpio.slice(-1)}`;
+}
+
+function rutValido(valor) {
+  const limpio = String(valor).replace(/[^0-9kK]/g, '').toUpperCase();
+  if (limpio.length < 7) return false;
+  const cuerpo = limpio.slice(0, -1);
+  if (!/^\d+$/.test(cuerpo)) return false;
+  let suma = 0;
+  let f = 2;
+  for (let i = cuerpo.length - 1; i >= 0; i--) {
+    suma += Number(cuerpo[i]) * f;
+    f = f === 7 ? 2 : f + 1;
+  }
+  const r = 11 - (suma % 11);
+  return (r === 11 ? '0' : r === 10 ? 'K' : String(r)) === limpio.slice(-1);
+}
+
 const telefonoValido = (v) => /^(?:\+?56)?\d{9}$/.test(String(v).replace(/[\s().-]/g, ''));
 
 // Campo de formulario con etiqueta y mensaje de error.

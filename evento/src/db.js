@@ -35,8 +35,8 @@ const ESQUEMA = `
     actualizado_en TEXT NOT NULL
   );
 
-  -- Datos personales: correo y teléfono se guardan cifrados (AES-256-GCM).
-  -- email_idx es un HMAC del correo para búsquedas exactas y unicidad.
+  -- Datos personales: RUT, correo y teléfono se guardan cifrados (AES-256-GCM).
+  -- rut_idx y email_idx son HMAC para búsquedas exactas y unicidad, sin guardar el dato en claro.
   CREATE TABLE IF NOT EXISTS estudiantes (
     id INTEGER PRIMARY KEY,
     nombres TEXT NOT NULL,
@@ -45,6 +45,8 @@ const ESQUEMA = `
     sede TEXT NOT NULL,
     email_cif TEXT NOT NULL,
     email_idx TEXT NOT NULL UNIQUE,
+    rut_cif TEXT,
+    rut_idx TEXT,
     telefono_cif TEXT NOT NULL,
     codigo TEXT NOT NULL UNIQUE,
     acceso_hash TEXT NOT NULL,
@@ -145,6 +147,13 @@ export function crearDB(storage) {
     }),
   };
   for (const sentencia of ESQUEMA.split(';')) if (sentencia.trim()) sql.exec(sentencia);
+  // Migración: RUT agregado después de la primera versión.
+  const columnas = sql.exec("SELECT name FROM pragma_table_info('estudiantes')").toArray().map((c) => c.name);
+  if (!columnas.includes('rut_idx')) {
+    sql.exec('ALTER TABLE estudiantes ADD COLUMN rut_cif TEXT');
+    sql.exec('ALTER TABLE estudiantes ADD COLUMN rut_idx TEXT');
+  }
+  sql.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_est_rut ON estudiantes(rut_idx) WHERE rut_idx IS NOT NULL');
 
   // Transacción reentrante: una llamada anidada se une a la transacción en curso.
   let enTransaccion = false;
@@ -189,27 +198,34 @@ export function crearDB(storage) {
         if (p('SELECT 1 FROM estudiantes WHERE email_idx = ?').get(idx)) {
           throw new ErrorNegocio('YA_REGISTRADO', 'Este correo ya está inscrito en el evento.');
         }
+        if (d.rut_idx && p('SELECT 1 FROM estudiantes WHERE rut_idx = ?').get(d.rut_idx)) {
+          throw new ErrorNegocio('YA_REGISTRADO', 'Este RUT ya está inscrito en el evento.');
+        }
         let codigo;
         do codigo = codigoAleatorio(16); while (p('SELECT 1 FROM estudiantes WHERE codigo = ?').get(codigo));
         const t = ahora();
-        const r = p(`INSERT INTO estudiantes (nombres, apellidos, busqueda, sede, email_cif, email_idx, telefono_cif, codigo, acceso_hash,
-                       origen, consentimiento_en, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-          .run(d.nombres, d.apellidos, normalizar(`${d.nombres} ${d.apellidos}`), d.sede, d.email_cif, idx, d.telefono_cif, codigo, accesoHash,
+        const r = p(`INSERT INTO estudiantes (nombres, apellidos, busqueda, sede, email_cif, email_idx, rut_cif, rut_idx, telefono_cif, codigo, acceso_hash,
+                       origen, consentimiento_en, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+          .run(d.nombres, d.apellidos, normalizar(`${d.nombres} ${d.apellidos}`), d.sede, d.email_cif, idx, d.rut_cif || null, d.rut_idx || null, d.telefono_cif, codigo, accesoHash,
             origen, t, t);
         return estudiantes.porId(Number(r.lastInsertRowid));
       });
     },
     porId: (id) => p('SELECT * FROM estudiantes WHERE id = ?').get(id),
     porEmailIdx: (idx) => p('SELECT * FROM estudiantes WHERE email_idx = ?').get(idx),
+    porRutIdx: (idx) => p('SELECT * FROM estudiantes WHERE rut_idx = ?').get(idx),
     porCodigo: (codigo) => p('SELECT * FROM estudiantes WHERE codigo = ?').get(codigo),
-    // emailIdx: índice ciego cuando la búsqueda es un correo completo.
-    buscar({ q = '', emailIdx = null, sede = '', estado = '', limite = 50, desde = 0 } = {}) {
+    // emailIdx / rutIdx: índice ciego cuando la búsqueda es un correo o un RUT completo.
+    buscar({ q = '', emailIdx = null, rutIdx = null, sede = '', estado = '', limite = 50, desde = 0 } = {}) {
       const condiciones = [];
       const args = [];
       const texto = String(q).trim().slice(0, 80);
       if (emailIdx) {
         condiciones.push('email_idx = ?');
         args.push(emailIdx);
+      } else if (rutIdx) {
+        condiciones.push('rut_idx = ?');
+        args.push(rutIdx);
       } else if (texto.length >= 2) {
         for (const palabra of normalizar(texto).split(/\s+/).slice(0, 4)) {
           condiciones.push("busqueda LIKE ? ESCAPE '\\'");
@@ -226,7 +242,6 @@ export function crearDB(storage) {
       return { total, filas };
     },
     todos: () => p('SELECT * FROM estudiantes ORDER BY apellidos, nombres').all(),
-    cambiarAcceso: (id, hash) => p('UPDATE estudiantes SET acceso_hash = ?, acceso_fallidos = 0, acceso_bloqueado_hasta = NULL WHERE id = ?').run(hash, id),
     registrarFalloAcceso(id) {
       const e = p('SELECT acceso_fallidos FROM estudiantes WHERE id = ?').get(id);
       const n = (e?.acceso_fallidos || 0) + 1;

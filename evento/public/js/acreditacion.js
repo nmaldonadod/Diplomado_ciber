@@ -136,7 +136,7 @@ function mostrarResultado(r) {
 
   const acciones = [el('button', { class: 'btn btn-chico', type: 'button', onclick: cerrarResultado }, 'Siguiente')];
   if (r.resultado === 'NO_REGISTRADO') {
-    acciones.unshift(el('button', { class: 'btn btn-chico', type: 'button', onclick: () => cambiarPestana('inscribir', { email: r.email }) }, 'Inscribir ahora'));
+    acciones.unshift(el('button', { class: 'btn btn-chico', type: 'button', onclick: () => cambiarPestana('inscribir', { email: r.email, rut: r.rut }) }, 'Inscribir ahora'));
   }
   if (r.resultado === 'ACREDITADO') {
     acciones.push(el('button', {
@@ -151,9 +151,9 @@ function mostrarResultado(r) {
   panelResultado = el('div', { class: `resultado ${clase}`, role: 'alert' },
     el('div', { class: 'grande' }, titulo),
     e && el('div', { class: 'nombre' }, nombreDe(e)),
-    e && el('div', { class: 'mini' }, `${e.sede} · ${e.email}`),
-    r.resultado === 'NO_REGISTRADO' && el('div', { class: 'mini' }, r.email ? `Correo ${r.email}` : 'La entrada no corresponde a ningún inscrito.'),
-    r.resultado === 'NO_RECONOCIDO' && el('div', { class: 'mini' }, 'Escanea el QR de la entrada digital o busca al estudiante por nombre.'),
+    e && el('div', { class: 'mini' }, [e.rut, e.sede, e.email].filter(Boolean).join(' · ')),
+    r.resultado === 'NO_REGISTRADO' && el('div', { class: 'mini' }, r.rut ? `RUT ${r.rut}` : r.email ? `Correo ${r.email}` : 'La entrada no corresponde a ningún inscrito.'),
+    r.resultado === 'NO_RECONOCIDO' && el('div', { class: 'mini' }, 'Escanea el QR de la entrada o de la cédula, o busca al estudiante por nombre o RUT.'),
     e && (e.talleres.length
       ? el('ul', null, e.talleres.map((t) => el('li', null, `${nombreDia(fechaDe(t.inicio), { weekday: 'short' })} ${hora(t.inicio)} · ${t.titulo}${t.sala ? ' · ' + t.sala : ''}`)))
       : el('div', { class: 'mini' }, 'Sin talleres inscritos')),
@@ -181,7 +181,7 @@ function vistaEscanear() {
   const estadoCam = el('span', { class: 'estado-cam oculto' });
   const inicio = el('div', { class: 'inicio' },
     el('strong', { style: { fontSize: '1.1rem' } }, 'Escanear entrada'),
-    el('p', null, 'Apunta la cámara al código QR de la entrada digital del estudiante.'),
+    el('p', null, 'Apunta la cámara al QR de la entrada digital o al QR del reverso de la cédula de identidad.'),
     el('button', {
       class: 'btn btn-primario', type: 'button',
       onclick: async (ev) => {
@@ -198,7 +198,7 @@ function vistaEscanear() {
     }, 'Activar cámara'));
   contenedorEscaner = el('div', { class: 'escaner' }, video, el('div', { class: 'mira' }, el('i')), estadoCam, inicio);
 
-  const input = el('input', { placeholder: 'Código de entrada o INACAPMAIL', autocomplete: 'off', 'aria-label': 'Código de entrada o correo', maxlength: 120 });
+  const input = el('input', { placeholder: 'RUT, código de entrada o INACAPMAIL', autocomplete: 'off', 'aria-label': 'RUT, código de entrada o correo', maxlength: 120 });
   const manual = el('form', { class: 'manual' }, input, el('button', { class: 'btn btn-secundario', type: 'submit' }, 'Acreditar'));
   manual.addEventListener('submit', async (ev) => {
     ev.preventDefault();
@@ -216,7 +216,7 @@ function filaEstudiante(e, alCambiar) {
   return el('div', { class: 'fila' },
     el('div', { class: 'q' },
       el('strong', null, nombreDe(e)),
-      el('span', null, `${e.sede} · ${e.email}`),
+      el('span', null, [e.rut, e.sede, e.email].filter(Boolean).join(' · ')),
       el('span', { style: { display: 'block' } }, e.talleres.length ? `Talleres: ${e.talleres.map((t) => t.titulo).join(', ')}` : 'Sin talleres')),
     e.acreditadoEn
       ? el('div', { style: { textAlign: 'right' } },
@@ -242,7 +242,7 @@ function filaEstudiante(e, alCambiar) {
 }
 
 function vistaBuscar() {
-  const resultados = el('div', { class: 'card', 'aria-live': 'polite' }, el('p', { class: 'sub' }, 'Busca por nombre, apellido o INACAPMAIL completo.'));
+  const resultados = el('div', { class: 'card', 'aria-live': 'polite' }, el('p', { class: 'sub' }, 'Busca por nombre, apellido, RUT o INACAPMAIL completo.'));
   const input = el('input', { type: 'search', placeholder: 'Buscar estudiante…', autocomplete: 'off', 'aria-label': 'Buscar', maxlength: 80 });
   let t;
   async function buscar() {
@@ -253,7 +253,7 @@ function vistaBuscar() {
       resultados.replaceChildren(...(lista.length
         ? lista.map((e) => filaEstudiante(e, buscar))
         : [el('p', { class: 'sub' }, 'Sin resultados. '),
-          el('button', { class: 'btn btn-secundario btn-chico', type: 'button', onclick: () => cambiarPestana('inscribir', { email: correoValido(q) ? q : '' }) }, 'Inscripción presencial')]));
+          el('button', { class: 'btn btn-secundario btn-chico', type: 'button', onclick: () => cambiarPestana('inscribir', { email: correoValido(q) ? q : '', rut: rutValido(q) ? formatearRutInput(q) : '' }) }, 'Inscripción presencial')]));
     } catch (e) {
       if (e.status === 401) return iniciar();
       toast(e.message, 'error');
@@ -264,7 +264,7 @@ function vistaBuscar() {
   return [el('div', { class: 'manual', style: { marginTop: 0, marginBottom: '12px' } }, input), resultados];
 }
 
-function vistaInscribir({ email = '' } = {}) {
+function vistaInscribir({ email = '', rut = '' } = {}) {
   const aviso = el('div', { class: 'aviso error oculto', role: 'alert' });
   const form = el('form', { class: 'card', novalidate: true },
     el('h2', null, 'Inscripción presencial'),
@@ -272,26 +272,27 @@ function vistaInscribir({ email = '' } = {}) {
     aviso,
     campo('nombres', 'Nombres', { maxlength: 60 }),
     campo('apellidos', 'Apellidos', { maxlength: 60 }),
-    campo('sede', 'Sede', { opciones: st.sedes }),
-    campo('email', 'INACAPMAIL', { type: 'email', value: email, maxlength: 120 }),
+    campo('rut', 'RUT', { value: rut || '', maxlength: 12, autocomplete: 'off', placeholder: '12.345.678-5' }),
+    campo('email', 'INACAPMAIL', { type: 'email', value: email || '', maxlength: 120 }),
     campo('telefono', 'Teléfono', { type: 'tel', maxlength: 16 }),
+    campo('sede', 'Sede', { opciones: st.sedes }),
     el('label', { class: 'check', 'data-campo': 'consentimiento' },
       el('input', { type: 'checkbox', name: 'consentimiento' }),
       el('span', null, 'El estudiante leyó y aceptó la política de privacidad del evento.', el('span', { class: 'err', style: { display: 'block' } }))),
     el('button', { class: 'btn btn-exito btn-bloque', type: 'submit' }, 'Inscribir y acreditar'));
+  form.elements.rut.addEventListener('input', (x) => (x.target.value = formatearRutInput(x.target.value)));
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const f = form.elements;
     try {
       const r = await api('POST', '/api/acreditacion/registro-presencial', {
-        nombres: f.nombres.value, apellidos: f.apellidos.value, sede: f.sede.value, email: f.email.value.trim(),
+        nombres: f.nombres.value, apellidos: f.apellidos.value, rut: f.rut.value, sede: f.sede.value, email: f.email.value.trim(),
         telefono: f.telefono.value, consentimiento: f.consentimiento.checked,
       });
       pitido('ok');
       pintar([segmentos(), el('div', { class: 'card', style: { textAlign: 'center' } },
         el('h2', null, `✓ ${nombreDe(r.estudiante)} inscrito/a y acreditado/a`),
-        el('p', null, 'Entrégale su código de acceso para que vea su entrada y elija talleres en la app:'),
-        el('div', { class: 'codigo-acceso' }, r.codigoAcceso),
+        el('p', null, 'Para ver su entrada y elegir taller en su teléfono, puede usar «Recuperar entrada» con su RUT, INACAPMAIL y sede.'),
         el('button', { class: 'btn btn-secundario', type: 'button', onclick: () => cambiarPestana('escanear') }, 'Continuar'))]);
     } catch (e) {
       mostrarErrores(form, e.datos?.errores);

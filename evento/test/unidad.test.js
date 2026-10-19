@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { extraerIdentidad } from '../src/qr.js';
+import { normalizarRut, formatearRut, enmascararRut, calcularDV } from '../src/rut.js';
 import { crearDB } from '../src/db.js';
 import * as seg from '../src/seguridad.js';
 import * as v from '../src/validacion.js';
@@ -9,13 +10,14 @@ import { almacenamientoFalso } from './apoyo.js';
 const claveB64 = Buffer.from(globalThis.crypto.getRandomValues(new Uint8Array(32))).toString('base64');
 
 test('validación del registro de estudiantes', () => {
-  const ok = v.validarRegistro({ nombres: 'María José', apellidos: "Pérez O'Higgins", sede: 'Curicó', email: 'Maria.Perez@INACAPMAIL.cl', telefono: '9 8765 4321' });
+  const ok = v.validarRegistro({ nombres: 'María José', apellidos: "Pérez O'Higgins", rut: '12.345.678-5', sede: 'Curicó', email: 'Maria.Perez@INACAPMAIL.cl', telefono: '9 8765 4321' });
   assert.deepEqual(ok.errores, {});
   assert.equal(ok.datos.email, 'maria.perez@inacapmail.cl');
   assert.equal(ok.datos.telefono, '+56987654321');
 
   const malo = v.validarRegistro({ nombres: '<script>', apellidos: '', sede: 'Arica', email: 'x@gmail.com', telefono: '123' });
-  assert.deepEqual(Object.keys(malo.errores).sort(), ['apellidos', 'email', 'nombres', 'sede', 'telefono']);
+  assert.deepEqual(Object.keys(malo.errores).sort(), ['apellidos', 'email', 'nombres', 'rut', 'sede', 'telefono']);
+  assert.equal(ok.datos.rut, '12345678-5');
 
   assert.equal(v.telefonoChile('+56 9 1234 5678'), '+56912345678');
   assert.equal(v.correoInstitucional('a..b@inacapmail.cl'), null);
@@ -32,7 +34,21 @@ test('validación de talleres y contraseñas', () => {
   assert.equal(v.validarClave('Clave-Segura-2026'), null);
 });
 
-test('QR: entrada propia, código escrito y correo institucional', () => {
+test('RUT: dígito verificador, formatos y enmascarado', () => {
+  assert.equal(calcularDV('12345678'), '5');
+  assert.equal(normalizarRut('12.345.678-5'), '12345678-5');
+  assert.equal(normalizarRut('123456785'), '12345678-5');
+  assert.equal(normalizarRut('10.000.013-k'), '10000013-K');
+  assert.equal(normalizarRut('12.345.678-6'), null);
+  assert.equal(normalizarRut(''), null);
+  assert.equal(formatearRut('12345678-5'), '12.345.678-5');
+  assert.equal(enmascararRut('12345678-5'), '••.••5.678-5');
+});
+
+test('QR: entrada propia, cédula, RUT, código escrito y correo institucional', () => {
+  assert.deepEqual(extraerIdentidad('https://portal.sidiv.registrocivil.cl/docstatus?RUN=12345678-5&type=CEDULA&serial=1'), { tipo: 'rut', rut: '12345678-5', fuente: 'cedula' });
+  assert.equal(extraerIdentidad('https://portal.sidiv.registrocivil.cl/docstatus?RUN=12345678-4'), null);
+  assert.deepEqual(extraerIdentidad('12.345.678-5'), { tipo: 'rut', rut: '12345678-5', fuente: 'texto' });
   assert.deepEqual(extraerIdentidad('EVT1:ABCDEFGHJKLMNPQR'), { tipo: 'ticket', codigo: 'ABCDEFGHJKLMNPQR' });
   assert.deepEqual(extraerIdentidad('abcd efgh jklm npqr'), { tipo: 'ticket', codigo: 'ABCDEFGHJKLMNPQR' });
   assert.deepEqual(extraerIdentidad('Juan.Soto@inacapmail.cl'), { tipo: 'email', email: 'juan.soto@inacapmail.cl' });
@@ -55,7 +71,6 @@ test('seguridad: PBKDF2, cifrado AES-GCM, índices y JPEG', async () => {
   const alterado = c.slice(0, -4) + (c.slice(-4) === 'AAAA' ? 'BBBB' : 'AAAA');
   await assert.rejects(cif.descifrar(alterado), 'GCM detecta manipulación');
   assert.equal(await cif.indice('A@inacapmail.cl'), await cif.indice('a@inacapmail.cl'));
-  assert.equal(await cif.hashCodigo('abcd2345'), await cif.hashCodigo('ABCD2345'));
   const otro = await seg.crearCifrador(Buffer.alloc(32, 7).toString('base64'));
   assert.notEqual(await otro.indice('a@inacapmail.cl'), await cif.indice('a@inacapmail.cl'), 'depende de la clave');
 
