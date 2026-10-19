@@ -1,0 +1,4 @@
+# Copia este archivo como .dev.vars para desarrollo local (no se sube al repositorio).
+# Genera una clave con: openssl rand -base64 32
+DATA_KEY=
+TOKEN_CONFIGURACION=

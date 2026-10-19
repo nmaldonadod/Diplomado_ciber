@@ -1,9 +1,11 @@
-'use strict';
+import { codigoAleatorio } from './seguridad.js';
 
-const { DatabaseSync } = require('node:sqlite');
-const { codigoAleatorio, tokenSesion, sha256 } = require('./seguridad');
+// Capa de datos sobre el SQLite de un Durable Object (ctx.storage.sql).
+// Todas las operaciones son síncronas y el Durable Object procesa una petición a la vez,
+// por lo que cada transacción es atómica (los cupos nunca se sobrevenden).
+// El cifrado/descifrado de datos personales ocurre fuera de esta capa: aquí sólo se guardan cifrados.
 
-class ErrorNegocio extends Error {
+export class ErrorNegocio extends Error {
   constructor(codigo, mensaje, status = 409) {
     super(mensaje);
     this.codigo = codigo;
@@ -127,32 +129,30 @@ const ESQUEMA = `
   );
 `;
 
-function abrirDB(archivo, cifrador) {
-  const db = new DatabaseSync(archivo);
-  db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000; PRAGMA secure_delete = ON;');
-  const columnas = db.prepare("SELECT name FROM pragma_table_info('estudiantes')").all().map((c) => c.name);
-  if (columnas.length && !columnas.includes('email_idx')) {
-    throw new Error(`${archivo} es de una versión anterior incompatible. Respáldalo y elimínalo para crear uno nuevo.`);
-  }
-  db.exec(ESQUEMA);
-  // Migración: columna «lema» agregada después de la primera versión.
-  if (!db.prepare("SELECT 1 FROM pragma_table_info('evento') WHERE name = 'lema'").get()) {
-    db.exec("ALTER TABLE evento ADD COLUMN lema TEXT NOT NULL DEFAULT ''");
-  }
+export function crearDB(storage) {
+  const sql = storage.sql;
+  const valor = (v) => (v === undefined ? null : typeof v === 'boolean' ? (v ? 1 : 0) : v);
+  // Adaptador con la misma forma que node:sqlite: prepare(sql).get/all/run.
+  const db = {
+    prepare: (q) => ({
+      get: (...a) => sql.exec(q, ...a.map(valor)).toArray()[0],
+      all: (...a) => sql.exec(q, ...a.map(valor)).toArray(),
+      run: (...a) => {
+        sql.exec(q, ...a.map(valor));
+        const r = sql.exec('SELECT changes() AS cambios, last_insert_rowid() AS id').one();
+        return { changes: r.cambios, lastInsertRowid: r.id };
+      },
+    }),
+  };
+  for (const sentencia of ESQUEMA.split(';')) if (sentencia.trim()) sql.exec(sentencia);
 
   // Transacción reentrante: una llamada anidada se une a la transacción en curso.
   let enTransaccion = false;
   function tx(fn) {
     if (enTransaccion) return fn();
-    db.exec('BEGIN IMMEDIATE');
     enTransaccion = true;
     try {
-      const r = fn();
-      db.exec('COMMIT');
-      return r;
-    } catch (e) {
-      db.exec('ROLLBACK');
-      throw e;
+      return storage.transactionSync(fn);
     } finally {
       enTransaccion = false;
     }
@@ -181,15 +181,11 @@ function abrirDB(archivo, cifrador) {
   };
 
   // ---------- estudiantes ----------
-  function hidratar(e) {
-    if (!e) return e;
-    return { ...e, email: cifrador.descifrar(e.email_cif), telefono: cifrador.descifrar(e.telefono_cif) };
-  }
-
+  // `d` trae el correo y teléfono ya cifrados (email_cif, telefono_cif) y el índice ciego del correo (email_idx).
   const estudiantes = {
     crear(d, accesoHash, origen = 'web') {
       return tx(() => {
-        const idx = cifrador.indice(d.email);
+        const idx = d.email_idx;
         if (p('SELECT 1 FROM estudiantes WHERE email_idx = ?').get(idx)) {
           throw new ErrorNegocio('YA_REGISTRADO', 'Este correo ya está inscrito en el evento.');
         }
@@ -198,21 +194,22 @@ function abrirDB(archivo, cifrador) {
         const t = ahora();
         const r = p(`INSERT INTO estudiantes (nombres, apellidos, busqueda, sede, email_cif, email_idx, telefono_cif, codigo, acceso_hash,
                        origen, consentimiento_en, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-          .run(d.nombres, d.apellidos, normalizar(`${d.nombres} ${d.apellidos}`), d.sede, cifrador.cifrar(d.email), idx, cifrador.cifrar(d.telefono), codigo, accesoHash,
+          .run(d.nombres, d.apellidos, normalizar(`${d.nombres} ${d.apellidos}`), d.sede, d.email_cif, idx, d.telefono_cif, codigo, accesoHash,
             origen, t, t);
         return estudiantes.porId(Number(r.lastInsertRowid));
       });
     },
-    porId: (id) => hidratar(p('SELECT * FROM estudiantes WHERE id = ?').get(id)),
-    porEmail: (email) => hidratar(p('SELECT * FROM estudiantes WHERE email_idx = ?').get(cifrador.indice(email))),
-    porCodigo: (codigo) => hidratar(p('SELECT * FROM estudiantes WHERE codigo = ?').get(codigo)),
-    buscar({ q = '', sede = '', estado = '', limite = 50, desde = 0 } = {}) {
+    porId: (id) => p('SELECT * FROM estudiantes WHERE id = ?').get(id),
+    porEmailIdx: (idx) => p('SELECT * FROM estudiantes WHERE email_idx = ?').get(idx),
+    porCodigo: (codigo) => p('SELECT * FROM estudiantes WHERE codigo = ?').get(codigo),
+    // emailIdx: índice ciego cuando la búsqueda es un correo completo.
+    buscar({ q = '', emailIdx = null, sede = '', estado = '', limite = 50, desde = 0 } = {}) {
       const condiciones = [];
       const args = [];
       const texto = String(q).trim().slice(0, 80);
-      if (texto.includes('@')) {
+      if (emailIdx) {
         condiciones.push('email_idx = ?');
-        args.push(cifrador.indice(texto));
+        args.push(emailIdx);
       } else if (texto.length >= 2) {
         for (const palabra of normalizar(texto).split(/\s+/).slice(0, 4)) {
           condiciones.push("busqueda LIKE ? ESCAPE '\\'");
@@ -225,10 +222,10 @@ function abrirDB(archivo, cifrador) {
       const where = condiciones.length ? 'WHERE ' + condiciones.join(' AND ') : '';
       const total = p(`SELECT COUNT(*) AS n FROM estudiantes ${where}`).get(...args).n;
       const filas = p(`SELECT * FROM estudiantes ${where} ORDER BY apellidos, nombres LIMIT ? OFFSET ?`)
-        .all(...args, Math.min(limite, 500), Math.max(desde, 0)).map(hidratar);
+        .all(...args, Math.min(limite, 500), Math.max(desde, 0));
       return { total, filas };
     },
-    todos: () => p('SELECT * FROM estudiantes ORDER BY apellidos, nombres').all().map(hidratar),
+    todos: () => p('SELECT * FROM estudiantes ORDER BY apellidos, nombres').all(),
     cambiarAcceso: (id, hash) => p('UPDATE estudiantes SET acceso_hash = ?, acceso_fallidos = 0, acceso_bloqueado_hasta = NULL WHERE id = ?').run(hash, id),
     registrarFalloAcceso(id) {
       const e = p('SELECT acceso_fallidos FROM estudiantes WHERE id = ?').get(id);
@@ -248,43 +245,39 @@ function abrirDB(archivo, cifrador) {
   };
 
   // ---------- sesiones ----------
+  // Se guarda sólo el hash SHA-256 del token; el token viaja únicamente en la cookie del navegador.
   const sesiones = {
-    crearEstudiante(estudianteId, dias = 30) {
-      const token = tokenSesion();
+    crearEstudiante(tokenHash, estudianteId, dias = 30) {
       p('INSERT INTO sesiones_estudiantes (token_hash, estudiante_id, creado_en, expira_en) VALUES (?, ?, ?, ?)')
-        .run(sha256(token), estudianteId, ahora(), enDias(dias));
-      return token;
+        .run(tokenHash, estudianteId, ahora(), enDias(dias));
     },
-    estudiante(token) {
-      if (!token) return null;
-      const s = p('SELECT estudiante_id FROM sesiones_estudiantes WHERE token_hash = ? AND expira_en > ?').get(sha256(token), ahora());
+    estudiante(tokenHash) {
+      if (!tokenHash) return null;
+      const s = p('SELECT estudiante_id FROM sesiones_estudiantes WHERE token_hash = ? AND expira_en > ?').get(tokenHash, ahora());
       return s ? estudiantes.porId(s.estudiante_id) : null;
     },
-    cerrarEstudiante: (token) => p('DELETE FROM sesiones_estudiantes WHERE token_hash = ?').run(sha256(String(token))),
+    cerrarEstudiante: (tokenHash) => p('DELETE FROM sesiones_estudiantes WHERE token_hash = ?').run(tokenHash),
     cerrarTodasEstudiante: (id) => p('DELETE FROM sesiones_estudiantes WHERE estudiante_id = ?').run(id),
 
-    crearUsuario(usuarioId, horas) {
-      const token = tokenSesion();
+    crearUsuario(tokenHash, usuarioId, horas) {
       const t = ahora();
       p('INSERT INTO sesiones_usuarios (token_hash, usuario_id, creado_en, expira_en, ultimo_uso) VALUES (?, ?, ?, ?, ?)')
-        .run(sha256(token), usuarioId, t, enHoras(horas), t);
-      return token;
+        .run(tokenHash, usuarioId, t, enHoras(horas), t);
     },
     // Expira por tiempo absoluto o por inactividad (minutos según rol).
-    usuario(token, inactividadPorRol) {
-      if (!token) return null;
-      const h = sha256(token);
+    usuario(tokenHash, inactividadPorRol) {
+      if (!tokenHash) return null;
       const s = p(`SELECT s.ultimo_uso, u.id, u.email, u.nombre, u.rol FROM sesiones_usuarios s JOIN usuarios u ON u.id = s.usuario_id
-                   WHERE s.token_hash = ? AND s.expira_en > ? AND u.activo = 1`).get(h, ahora());
+                   WHERE s.token_hash = ? AND s.expira_en > ? AND u.activo = 1`).get(tokenHash, ahora());
       if (!s) return null;
       if (Date.now() - Date.parse(s.ultimo_uso) > inactividadPorRol[s.rol] * 60_000) {
-        p('DELETE FROM sesiones_usuarios WHERE token_hash = ?').run(h);
+        p('DELETE FROM sesiones_usuarios WHERE token_hash = ?').run(tokenHash);
         return null;
       }
-      p('UPDATE sesiones_usuarios SET ultimo_uso = ? WHERE token_hash = ?').run(ahora(), h);
+      p('UPDATE sesiones_usuarios SET ultimo_uso = ? WHERE token_hash = ?').run(ahora(), tokenHash);
       return { id: s.id, email: s.email, nombre: s.nombre, rol: s.rol };
     },
-    cerrarUsuario: (token) => p('DELETE FROM sesiones_usuarios WHERE token_hash = ?').run(sha256(String(token))),
+    cerrarUsuario: (tokenHash) => p('DELETE FROM sesiones_usuarios WHERE token_hash = ?').run(tokenHash),
     cerrarTodasUsuario: (id) => p('DELETE FROM sesiones_usuarios WHERE usuario_id = ?').run(id),
     purgarExpiradas() {
       const t = ahora();
@@ -352,7 +345,7 @@ function abrirDB(archivo, cifrador) {
       return r;
     },
     inscritos: (id) => p(`SELECT e.* FROM inscripciones i JOIN estudiantes e ON e.id = i.estudiante_id
-                          WHERE i.taller_id = ? ORDER BY e.apellidos, e.nombres`).all(id).map(hidratar),
+                          WHERE i.taller_id = ? ORDER BY e.apellidos, e.nombres`).all(id),
   };
 
   // ---------- inscripciones a talleres ----------
@@ -386,7 +379,7 @@ function abrirDB(archivo, cifrador) {
     },
     todas: () => p(`SELECT t.id AS taller_id, t.titulo, t.inicio, t.sala, e.* FROM inscripciones i
                     JOIN talleres t ON t.id = i.taller_id JOIN estudiantes e ON e.id = i.estudiante_id
-                    ORDER BY t.inicio, t.titulo, e.apellidos, e.nombres`).all().map(hidratar),
+                    ORDER BY t.inicio, t.titulo, e.apellidos, e.nombres`).all(),
   };
 
   // ---------- agenda ----------
@@ -424,8 +417,8 @@ function abrirDB(archivo, cifrador) {
 
   return {
     db, tx, evento, estudiantes, sesiones, usuarios, talleres, inscripciones, agenda, auditoria, estadisticas,
-    cerrar: () => db.close(),
+
   };
 }
 
-module.exports = { abrirDB, ErrorNegocio };
+

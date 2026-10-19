@@ -1,58 +1,13 @@
-'use strict';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { levantarWorker, cliente } from './apoyo.js';
 
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const http = require('node:http');
-const os = require('node:os');
-const fs = require('node:fs');
-const path = require('node:path');
-const crypto = require('node:crypto');
-const { abrirDB } = require('../src/db');
-const { crearApp } = require('../src/app');
-const seg = require('../src/seguridad');
-
+// Estas pruebas levantan el Worker real con `wrangler dev` (runtime workerd de Cloudflare).
 const TOKEN = 'TOKENINICIAL1';
 const CLAVE_ADMIN = 'Admin-Segura-2026';
+const DATA_KEY = Buffer.alloc(32, 9).toString('base64');
 
-async function levantar() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'evento-test-'));
-  const db = abrirDB(':memory:', seg.crearCifrador(crypto.randomBytes(32)));
-  const app = crearApp({ db, publicDir: path.join(__dirname, '..', 'public'), fotosDir: path.join(dir, 'fotos'), tokenInicial: TOKEN });
-  const server = http.createServer(app.handler);
-  await new Promise((r) => server.listen(0, '127.0.0.1', r));
-  return {
-    base: `http://127.0.0.1:${server.address().port}`,
-    db,
-    async cerrar() {
-      app.cerrar();
-      server.closeAllConnections();
-      await new Promise((r) => server.close(r));
-      db.cerrar();
-      fs.rmSync(dir, { recursive: true, force: true });
-    },
-  };
-}
-
-function cliente(base) {
-  const cookies = {};
-  return async function pedir(metodo, ruta, cuerpo, extra = {}) {
-    const headers = { Cookie: Object.entries(cookies).map(([k, v]) => `${k}=${v}`).join('; '), ...extra };
-    let body;
-    if (Buffer.isBuffer(cuerpo)) body = cuerpo;
-    else if (cuerpo !== undefined) {
-      headers['Content-Type'] = headers['Content-Type'] || 'application/json';
-      body = JSON.stringify(cuerpo);
-    }
-    const res = await fetch(base + ruta, { method: metodo, headers, body });
-    for (const c of res.headers.getSetCookie()) {
-      const [par] = c.split(';');
-      const i = par.indexOf('=');
-      cookies[par.slice(0, i)] = par.slice(i + 1);
-    }
-    const tipo = res.headers.get('content-type') || '';
-    return { status: res.status, headers: res.headers, body: tipo.includes('json') ? await res.json() : await res.text() };
-  };
-}
+const levantar = () => levantarWorker({ TOKEN_CONFIGURACION: TOKEN, DATA_KEY });
 
 const ESTUDIANTE = { nombres: 'Ana', apellidos: 'Pérez Soto', sede: 'Rancagua', email: 'ana.perez@inacapmail.cl', telefono: '9 1234 5678', consentimiento: true };
 
@@ -94,11 +49,11 @@ test('flujo completo: admin configura → estudiante se inscribe con taller → 
   assert.equal(r.status, 201);
 
   // Foto del docente: se rechaza lo que no es JPEG y se limpia el EXIF.
-  r = await admin('PUT', `/api/admin/talleres/${tallerId}/foto`, Buffer.from('<svg/>'), { 'Content-Type': 'image/svg+xml' });
+  r = await admin('PUT', `/api/admin/talleres/${tallerId}/foto`, new TextEncoder().encode('<svg/>'), { 'Content-Type': 'image/svg+xml' });
   assert.equal(r.status, 415);
-  r = await admin('PUT', `/api/admin/talleres/${tallerId}/foto`, Buffer.from('no es jpeg'), { 'Content-Type': 'image/jpeg' });
+  r = await admin('PUT', `/api/admin/talleres/${tallerId}/foto`, new TextEncoder().encode('no es jpeg'), { 'Content-Type': 'image/jpeg' });
   assert.equal(r.status, 422);
-  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe1, 0x00, 0x08, 0x45, 0x78, 0x69, 0x66, 0x00, 0x00, 0xff, 0xda, 0x00, 0x04, 0x01, 0x02, 0x33, 0xff, 0xd9]);
+  const jpeg = Uint8Array.from([0xff, 0xd8, 0xff, 0xe1, 0x00, 0x08, 0x45, 0x78, 0x69, 0x66, 0x00, 0x00, 0xff, 0xda, 0x00, 0x04, 0x01, 0x02, 0x33, 0xff, 0xd9]);
   r = await admin('PUT', `/api/admin/talleres/${tallerId}/foto`, jpeg, { 'Content-Type': 'image/jpeg' });
   assert.equal(r.status, 200);
   assert.match(r.body.foto, /^\/fotos\/[a-f0-9]{32}\.jpg$/);
@@ -233,11 +188,11 @@ test('seguridad: CSRF, cabeceras, archivos, bloqueo de cuentas y límites', asyn
   r = await fetch(srv.base + '/api/staff/login', { method: 'POST', body: 'email=a&clave=b', headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
   assert.equal(r.status, 415);
 
-  for (const p of ['/%2e%2e/server.js', '/../package.json', '/js/../../server.js', '/fotos/../evento.db', '/data/clave.key', '/src/app.js']) {
+  for (const p of ['/%2e%2e/wrangler.jsonc', '/package.json', '/js/..%2f..%2fsrc/worker.js', '/fotos/..%2fx.jpg', '/.dev.vars', '/src/evento.js', '/config/mes-ciberseguridad-2026.json']) {
     assert.equal((await c('GET', p)).status, 404, p);
   }
 
-  r = await c('POST', '/api/registro', Buffer.alloc(40 * 1024, 'a'), { 'Content-Type': 'application/json' });
+  r = await c('POST', '/api/registro', new Uint8Array(40 * 1024).fill(97), { 'Content-Type': 'application/json' });
   assert.equal(r.status, 413);
 
   // Bloqueo de cuenta tras intentos fallidos (aunque luego se use la contraseña correcta).
@@ -260,4 +215,55 @@ test('seguridad: CSRF, cabeceras, archivos, bloqueo de cuentas y límites', asyn
   // Los errores internos no exponen detalles.
   r = await c('GET', '/api/admin/talleres/abc/inscritos');
   assert.equal(r.status, 401);
+});
+
+test('tiempo real: los cupos llegan por WebSocket al inscribirse', async (t) => {
+  const srv = await levantar();
+  t.after(() => srv.cerrar());
+  const admin = await prepararAdmin(srv.base);
+  const { body: taller } = await admin('POST', '/api/admin/talleres', { titulo: 'Redes', inicio: '2026-11-12T10:00', fin: '2026-11-12T12:00', cupos: 10, publicado: true });
+
+  const ws = new WebSocket(srv.base.replace('http', 'ws') + '/api/tiempo-real');
+  const mensajes = [];
+  ws.addEventListener('message', (e) => mensajes.push(e.data));
+  await new Promise((ok, falla) => { ws.addEventListener('open', ok); ws.addEventListener('error', falla); });
+  ws.send('ping');
+
+  const est = cliente(srv.base);
+  await est('POST', '/api/registro', { ...ESTUDIANTE, talleres: [taller.id] });
+  for (let i = 0; i < 40 && !mensajes.some((m) => m.includes('"inscritos":1')); i++) await new Promise((r) => setTimeout(r, 50));
+  ws.close();
+  assert.ok(mensajes.includes('pong'), 'responde ping sin despertar al objeto');
+  const cupos = mensajes.filter((m) => m !== 'pong').map((m) => JSON.parse(m));
+  assert.equal(cupos[0].tipo, 'cupos', 'al conectar recibe el estado actual');
+  assert.ok(cupos.some((m) => m.tipo === 'cupos' && m.datos[taller.id]?.inscritos === 1), 'recibe la actualización');
+});
+
+test('carga inicial del Mes de la Ciberseguridad e importación desde archivo', async (t) => {
+  const srv = await levantarWorker({ TOKEN_CONFIGURACION: TOKEN, DATA_KEY, EVENTO_INICIAL: 'si' });
+  t.after(() => srv.cerrar());
+  const anon = cliente(srv.base);
+  let r = await anon('GET', '/api/evento');
+  assert.equal(r.body.evento.nombre, 'Mes de la Ciberseguridad');
+  assert.equal(r.body.agenda.length, 7);
+  assert.deepEqual(r.body.talleres.map((x) => x.sala).sort(), ['Lab 404', 'Sala 101'], 'sólo los talleres publicados');
+
+  const admin = cliente(srv.base);
+  await admin('POST', '/api/staff/configuracion-inicial', { token: TOKEN, nombre: 'Admin', email: 'admin@inacap.cl', clave: CLAVE_ADMIN });
+  await admin('POST', '/api/staff/login', { email: 'admin@inacap.cl', clave: CLAVE_ADMIN });
+  r = await admin('GET', '/api/admin/talleres');
+  const lab409 = r.body.find((x) => x.sala === 'Lab 409');
+  r = await admin('POST', '/api/admin/importar', { datos: { evento: { nombre: 'X' }, agenda: [], talleres: [] } });
+  assert.equal(r.status, 422, 'valida el archivo antes de aplicar');
+  const archivo = {
+    evento: { nombre: 'Mes de la Ciberseguridad', lema: 'Modo Seguro', fecha_inicio: '2026-10-21', fecha_fin: '2026-10-21', max_talleres: 1, inscripciones_abiertas: 1, talleres_abiertos: 1 },
+    agenda: [{ tipo: 'charla', titulo: 'Cierre', inicio: '2026-10-21T17:30', fin: '2026-10-21T17:40' }],
+    talleres: [{ titulo: 'Taller nuevo en Lab 409', docente: 'Docente', sala: 'Lab 409', inicio: '2026-10-21T16:10', fin: '2026-10-21T17:30', cupos: 25, publicado: true }],
+  };
+  r = await admin('POST', '/api/admin/importar', { datos: archivo });
+  assert.deepEqual(r.body, { creados: 0, actualizados: 1, actividades: 1 });
+  r = await admin('GET', '/api/admin/talleres');
+  const actualizado = r.body.find((x) => x.sala === 'Lab 409');
+  assert.equal(actualizado.id, lab409.id, 'reconoce el taller por sala y día');
+  assert.equal(actualizado.titulo, 'Taller nuevo en Lab 409');
 });

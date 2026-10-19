@@ -1,5 +1,3 @@
-'use strict';
-
 const SEDES = ['Santiago Centro', 'Santiago Sur', 'Rancagua', 'Talca', 'Curicó', 'Apoquindo', 'Valparaíso'];
 const DOMINIO_CORREO = 'inacapmail.cl';
 const TIPOS_AGENDA = ['charla', 'pausa', 'acreditacion', 'actividad'];
@@ -148,7 +146,7 @@ function validarUsuario(b, { exigirClave }) {
 
 const hayErrores = (e) => Object.keys(e).length > 0;
 
-module.exports = {
+export {
   SEDES, DOMINIO_CORREO, TIPOS_AGENDA, ROLES,
   linea, parrafo, fechaHoraValida, correoInstitucional, telefonoChile,
   validarRegistro, validarTaller, validarAgenda, validarEvento, validarClave, validarUsuario, hayErrores,

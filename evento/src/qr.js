@@ -1,6 +1,4 @@
-'use strict';
-
-const { correoInstitucional } = require('./validacion');
+import { correoInstitucional } from './validacion.js';
 
 const PREFIJO_TICKET = 'EVT1:';
 const RE_TICKET = /^EVT1:([A-Z2-9]{16})$/;
@@ -27,4 +25,4 @@ function extraerIdentidad(texto) {
   return null;
 }
 
-module.exports = { extraerIdentidad, PREFIJO_TICKET };
+export { extraerIdentidad, PREFIJO_TICKET };

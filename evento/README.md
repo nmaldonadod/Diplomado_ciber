@@ -1,106 +1,128 @@
-# Plataforma de eventos INACAP
+# Mes de la Ciberseguridad · plataforma de eventos INACAP
 
-Aplicación web para gestionar eventos estudiantiles, pensada para usarse desde el teléfono.
+Aplicación web para el evento, pensada para usarse desde el teléfono y publicada en **Cloudflare Workers**.
 Tiene **tres interfaces**, cada una con sus propios permisos:
 
 | Interfaz | URL | Quién | Qué hace |
 |---|---|---|---|
 | **Estudiante** | `/` | Cualquier estudiante | Ve la agenda y los talleres con cupos en vivo, se inscribe, elige talleres (al inscribirse o después) y obtiene su entrada con código QR |
 | **Acreditador** | `/acreditacion` | Cuentas con rol *acreditador* (o *admin*) | Escanea el QR de la entrada con la cámara del teléfono, busca estudiantes e inscribe presencialmente |
-| **Administrador** | `/admin` | Cuentas con rol *admin* | Configura el evento, crea talleres (título, descripción, cupos, horario, sala, **foto del docente**), arma la agenda, gestiona estudiantes y cuentas, exporta y revisa la auditoría |
+| **Administrador** | `/admin` | Cuentas con rol *admin* | Configura el evento, crea talleres (título, descripción, cupos, horario, sala, **foto del docente**), arma la agenda, importa cambios desde un archivo, gestiona estudiantes y cuentas, exporta y revisa la auditoría |
 
-### Datos que se piden al estudiante
+Datos que se piden al estudiante: nombres · apellidos · sede (Santiago Centro, Santiago Sur, Rancagua, Talca, Curicó,
+Apoquindo, Valparaíso) · INACAPMAIL (sólo `@inacapmail.cl`) · teléfono · aceptación de la política de privacidad.
 
-Nombres · Apellidos · Sede (Santiago Centro, Santiago Sur, Rancagua, Talca, Curicó, Apoquindo, Valparaíso) ·
-INACAPMAIL (sólo se aceptan correos `@inacapmail.cl`) · Teléfono · aceptación de la política de privacidad.
-Los talleres se pueden elegir en el mismo formulario o más tarde.
+## Arquitectura en Cloudflare
 
-## Puesta en marcha
+```
+Navegador ──HTTPS──▶ Worker (src/worker.js)
+                      ├─ archivos del frontend (public/) con cabeceras de seguridad
+                      ├─ /fotos/*  ──▶ R2 (fotos de docentes, sin metadatos)
+                      └─ /api/*    ──▶ Durable Object «EventoDO» (src/evento.js)
+                                        ├─ SQLite: estudiantes, talleres, agenda, cuentas, auditoría
+                                        ├─ reglas de cupos y topes (una petición a la vez → nunca se sobrevenden)
+                                        └─ WebSockets con hibernación: cupos en vivo
+```
 
-Requiere **Node.js 22.13 o superior**. No usa dependencias externas (base de datos SQLite incluida en Node).
+Al crearse por primera vez, el Durable Object carga el evento de `config/mes-ciberseguridad-2026.json`
+(agenda completa y talleres). Después, todo se administra desde `/admin`.
+
+## Despliegue
+
+Requisitos de la cuenta de Cloudflare: plan **Workers Paid** (US$5/mes: la protección de contraseñas PBKDF2 necesita
+más de los 10 ms de CPU del plan gratuito) y **R2** activado.
+
+Con `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` definidos, basta con:
 
 ```bash
 cd evento
-npm start            # la primera vez muestra en consola un token de configuración
+npm run desplegar   # pruebas, bucket R2, despliegue y secretos que falten; muestra el token del primer administrador
 ```
 
-1. Abre `http://localhost:3000/admin`, ingresa el **token de configuración** que aparece en la consola y crea tu cuenta de administrador.
-2. En **Evento** completa nombre, fechas, lugar y contacto, y publícalo.
-3. En **Talleres** crea los talleres con su foto del docente; en **Agenda**, las charlas y pausas.
-4. En **Usuarios** crea las cuentas de los acreditadores.
-5. Comparte `https://tu-dominio/` con los estudiantes y `https://tu-dominio/acreditacion` con los acreditadores.
+O paso a paso:
 
-Para cargar de una vez el **Mes de la Ciberseguridad 2026** (agenda completa y los 4 talleres en borrador) ejecuta `npm run cargar-evento` antes de `npm start`. Los datos están en `config/mes-ciberseguridad-2026.json`. Si el evento ya está cargado y cambias ese archivo, aplica los cambios con `npm run cargar-evento -- --actualizar`: actualiza datos, agenda y talleres (reconocidos por sala y día) sin perder inscripciones ni fotos.
+```bash
+cd evento
+npm install
+npx wrangler r2 bucket create mes-ciberseguridad-fotos
+openssl rand -base64 32 | npx wrangler secret put DATA_KEY           # clave de cifrado de datos personales
+openssl rand -hex 12    | npx wrangler secret put TOKEN_CONFIGURACION # token para crear el primer administrador
+npm run deploy
+```
 
-### Variables de entorno
+Luego abre `https://<tu-worker>.workers.dev/admin`, ingresa el **token de configuración** y crea tu cuenta de
+administrador (el token deja de servir apenas existe uno). En **Usuarios** crea las cuentas de los acreditadores.
 
-| Variable | Descripción |
-|---|---|
-| `DATA_KEY` | **Recomendada en producción.** Clave de cifrado de datos personales: 32 bytes en base64 (`openssl rand -base64 32`). Si no se define, se genera `data/clave.key`. **Respáldala aparte**: sin ella los correos y teléfonos no se pueden leer. |
-| `DATA_DIR` | Carpeta de la base de datos, fotos y clave (por defecto `./data`, permisos 700) |
-| `PORT` / `HOST` | Puerto e interfaz (por defecto `3000` / `0.0.0.0`) |
-| `TLS_CERT` / `TLS_KEY` | Certificado y llave para servir HTTPS directamente |
-| `TRUST_PROXY` | `1` si está detrás de un proxy HTTPS (Nginx, Render, Railway, Cloudflare). Sólo actívalo en ese caso. |
+> **DATA_KEY** cifra correos y teléfonos. Es un secreto de Cloudflare (no se puede volver a leer); si se cambia, los
+> datos ya guardados quedan ilegibles. No la cambies con inscripciones en curso.
 
-**La aplicación debe publicarse con HTTPS**: protege los datos en tránsito y, además, los navegadores sólo permiten usar la cámara (para acreditar) en sitios `https://`.
+### Variables y secretos
+
+| Nombre | Tipo | Descripción |
+|---|---|---|
+| `DATA_KEY` | secreto | 32 bytes en base64. Sin ella la API responde «falta configurar» (falla cerrada). |
+| `TOKEN_CONFIGURACION` | secreto | Token de un solo uso para crear el primer administrador. |
+| `ITERACIONES_CLAVE` | variable | Iteraciones PBKDF2 para contraseñas del staff (por defecto 600.000, recomendación OWASP). |
+| `EVENTO_INICIAL` | variable | `no` desactiva la carga automática del evento de `config/`. |
+
+### Actualizar agenda o talleres
+
+- Desde **Administración → Evento → Importar desde archivo**, con un JSON del mismo formato que
+  `config/mes-ciberseguridad-2026.json`. Reemplaza la agenda y actualiza los talleres (reconocidos por sala y día)
+  sin perder inscripciones ni fotos.
+- O editando cada taller en **Administración → Talleres**.
+
+## Desarrollo local
+
+```bash
+cp .dev.vars.example .dev.vars   # completa DATA_KEY y TOKEN_CONFIGURACION
+npm run dev                      # http://localhost:8787
+npm test                         # pruebas unitarias + API contra el runtime real (wrangler dev)
+```
 
 ## Seguridad y protección de datos personales
 
 Diseñada considerando la Ley N.° 19.628 (y su actualización por la Ley N.° 21.719) y las recomendaciones OWASP.
 
 **Datos personales**
-- Minimización: sólo se piden los datos necesarios (no RUT, no fotos de estudiantes).
-- Correo y teléfono **cifrados en la base de datos** (AES-256-GCM); la búsqueda por correo usa un índice HMAC, sin guardar el correo en claro.
+- Minimización: sólo los datos necesarios (sin RUT ni fotos de estudiantes).
+- Correo y teléfono **cifrados** (AES-256-GCM, claves derivadas con HKDF); búsqueda por correo mediante índice ciego HMAC.
 - Consentimiento explícito con fecha registrada y política de privacidad pública (`/privacidad`).
-- Acceso según rol: el acreditador ve sólo nombre, sede, talleres y el correo parcialmente oculto; **no** ve teléfonos ni puede exportar.
+- Acceso según rol: el acreditador ve nombre, sede, talleres y el correo parcialmente oculto; **no** ve teléfonos ni exporta.
 - El administrador puede eliminar a un estudiante o **todos los datos** al terminar el evento (con confirmación y contraseña).
-- Las exportaciones CSV quedan registradas en la auditoría.
+- Exportaciones CSV auditadas y protegidas contra inyección de fórmulas.
 
 **Autenticación y sesiones**
-- Cuentas de staff con contraseñas de mínimo 12 caracteres, hash **scrypt** con sal, bloqueo progresivo tras 5 intentos fallidos y mensajes que no revelan si una cuenta existe.
-- Estudiantes: entran con su INACAPMAIL + un **código de acceso** aleatorio entregado una sola vez (guardado con scrypt, con bloqueo tras 5 intentos). Si lo pierden, el administrador genera uno nuevo.
-- Sesiones del lado del servidor (token aleatorio de 256 bits, guardado como hash), cookies `HttpOnly`, `Secure`, prefijo `__Host-`, `SameSite=Strict` para el staff. Expiración por inactividad (admin 60 min, acreditador 3 h) y absoluta.
-- Al desactivar una cuenta, cambiar su rol o su contraseña se cierran todas sus sesiones. Siempre queda al menos un administrador activo.
-- El primer administrador se crea con un token de un solo uso que sólo aparece en la consola del servidor.
+- Staff: contraseñas de 12+ caracteres con **PBKDF2-SHA256 (600.000 iteraciones)**, bloqueo progresivo tras 5 intentos,
+  mensajes que no revelan si una cuenta existe.
+- Estudiantes: INACAPMAIL + **código de acceso** aleatorio entregado una sola vez (HMAC con clave secreta), bloqueo tras 5 intentos.
+- Sesiones en el servidor (token de 256 bits guardado como hash), cookies `HttpOnly`, `Secure`, prefijo `__Host-`,
+  `SameSite=Strict` para el staff; expiración por inactividad (admin 60 min, acreditador 3 h) y absoluta.
 
-**Aplicación**
-- Validación estricta en el servidor de todos los datos; consultas SQL parametrizadas; transacciones para que los cupos nunca se sobrevendan.
-- Protección CSRF (verificación de `Origin`/`Sec-Fetch-Site` y JSON obligatorio).
-- Cabeceras: CSP estricta (`script-src 'self'`, sin scripts en línea), HSTS, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, COOP/CORP, `Permissions-Policy`.
-- El frontend nunca inserta datos de usuarios como HTML.
-- Fotos de docentes: el navegador las recorta y convierte a JPEG; el servidor sólo acepta JPEG válidos de hasta 2 MB, **elimina los metadatos** (EXIF/GPS) y las guarda con nombre aleatorio.
-- Límites de tamaño de solicitudes y de intentos por IP; errores internos sin detalles para el cliente.
-- CSV protegidos contra inyección de fórmulas.
-- **Auditoría** de ingresos, intentos fallidos, accesos denegados, cambios, acreditaciones, exportaciones y eliminaciones (sin guardar datos personales en el registro).
-
-**Recomendaciones de operación**
-- Publicar sólo con HTTPS y definir `DATA_KEY` fuera del servidor.
-- Respaldar `data/` (cifrado) y restringir el acceso al servidor.
-- Entregar las contraseñas iniciales por un canal seguro y pedir que se cambien.
-- Eliminar los datos de estudiantes cuando ya no sean necesarios.
-
-## Pruebas
-
-```bash
-npm test
-```
-
-Cubren validaciones, cifrado, limpieza de imágenes, reglas de cupos y topes, permisos por rol, CSRF, bloqueo de cuentas, archivos protegidos y el flujo completo admin → estudiante → acreditador.
+**Aplicación e infraestructura**
+- HTTPS obligatorio con HSTS; protección DDoS de la red de Cloudflare.
+- Validación estricta en el servidor; consultas SQL parametrizadas; transacciones atómicas.
+- CSRF (verificación de `Origin`/`Sec-Fetch-Site` + JSON obligatorio); WebSocket sólo desde el mismo origen.
+- Cabeceras: CSP estricta (`script-src 'self'`), `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, COOP/CORP.
+- Fuentes e imágenes alojadas en la propia app (ninguna petición a terceros).
+- Fotos: el navegador las recorta y convierte a JPEG; el servidor acepta sólo JPEG válidos ≤ 2 MB, **elimina metadatos** (EXIF/GPS) y usa nombres aleatorios.
+- Límites de tamaño e intentos por IP real del cliente (`CF-Connecting-IP`); errores sin detalles internos.
+- **Auditoría** de ingresos, intentos fallidos, accesos denegados, cambios, acreditaciones, exportaciones y eliminaciones.
 
 ## Estructura
 
 ```
 evento/
-├── server.js               # arranque HTTP/HTTPS
-├── config/mes-ciberseguridad-2026.json   # agenda y talleres del evento
-├── scripts/cargar-evento.js
+├── wrangler.jsonc                    # configuración de Cloudflare (Worker, Durable Object, R2)
+├── config/mes-ciberseguridad-2026.json
 ├── src/
-│   ├── app.js              # API y permisos por rol
-│   ├── db.js               # SQLite: evento, estudiantes, talleres, agenda, usuarios, auditoría
-│   ├── seguridad.js        # scrypt, cifrado AES-GCM, tokens, limitador, limpieza JPEG
-│   ├── validacion.js       # reglas de validación (sedes, INACAPMAIL, teléfono, contraseñas…)
-│   ├── http.js             # cabeceras de seguridad, cookies, CSRF, lectura de cuerpos
-│   └── qr.js               # interpretación de lo escaneado en la acreditación
-├── public/                 # index.html (estudiante) · acreditacion.html · admin.html · privacidad.html
+│   ├── worker.js     # entrada: frontend, fotos (R2) y derivación de la API
+│   ├── evento.js     # Durable Object: API, permisos por rol, tiempo real
+│   ├── db.js         # esquema y consultas SQLite
+│   ├── seguridad.js  # PBKDF2, AES-GCM, HMAC, tokens, limpieza JPEG (WebCrypto)
+│   ├── validacion.js # reglas de validación
+│   ├── http.js       # cabeceras de seguridad, cookies, CSRF, lectura de cuerpos
+│   └── qr.js         # interpretación de lo escaneado en la acreditación
+├── public/           # index.html (estudiante) · acreditacion.html · admin.html · privacidad.html
 └── test/
 ```

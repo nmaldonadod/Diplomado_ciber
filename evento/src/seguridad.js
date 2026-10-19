@@ -1,103 +1,114 @@
-'use strict';
+// Primitivas de seguridad sobre WebCrypto (disponible en Cloudflare Workers y en Node ≥ 20).
 
-const crypto = require('node:crypto');
-const fs = require('node:fs');
-const { promisify } = require('node:util');
+const enc = new TextEncoder();
+const dec = new TextDecoder();
+const subtle = globalThis.crypto.subtle;
 
-const scrypt = promisify(crypto.scrypt);
+const aB64 = (bytes) => Buffer.from(bytes).toString('base64');
+const deB64 = (texto) => new Uint8Array(Buffer.from(texto, 'base64'));
+const aHex = (buf) => Buffer.from(buf).toString('hex');
+const aleatorio = (n) => globalThis.crypto.getRandomValues(new Uint8Array(n));
 
-// ---------- contraseñas y códigos de acceso (scrypt) ----------
-
-const SCRYPT = { N: 32768, r: 8, p: 1, maxmem: 96 * 1024 * 1024 };
-
-async function hashClave(clave) {
-  const sal = crypto.randomBytes(16);
-  const h = await scrypt(String(clave).normalize('NFKC'), sal, 32, SCRYPT);
-  return `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${sal.toString('base64')}$${h.toString('base64')}`;
+// Comparación en tiempo constante.
+export function iguales(a, b) {
+  const x = typeof a === 'string' ? enc.encode(a) : a;
+  const y = typeof b === 'string' ? enc.encode(b) : b;
+  if (x.length !== y.length) return false;
+  let r = 0;
+  for (let i = 0; i < x.length; i++) r |= x[i] ^ y[i];
+  return r === 0;
 }
 
-async function verificarClave(clave, guardado) {
+// ---------- contraseñas del staff: PBKDF2-HMAC-SHA256 (recomendación OWASP: 600.000 iteraciones) ----------
+
+async function pbkdf2(clave, sal, iteraciones) {
+  const base = await subtle.importKey('raw', enc.encode(String(clave).normalize('NFKC')), 'PBKDF2', false, ['deriveBits']);
+  return new Uint8Array(await subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: sal, iterations: iteraciones }, base, 256));
+}
+
+export async function hashClave(clave, iteraciones = 600000) {
+  const sal = aleatorio(16);
+  return `pbkdf2-sha256$${iteraciones}$${aB64(sal)}$${aB64(await pbkdf2(clave, sal, iteraciones))}`;
+}
+
+export async function verificarClave(clave, guardado) {
   const partes = String(guardado || '').split('$');
-  if (partes.length !== 6 || partes[0] !== 'scrypt') return false;
-  const [, N, r, p, sal, hash] = partes;
-  const esperado = Buffer.from(hash, 'base64');
-  const calculado = await scrypt(String(clave).normalize('NFKC'), Buffer.from(sal, 'base64'), esperado.length,
-    { N: Number(N), r: Number(r), p: Number(p), maxmem: SCRYPT.maxmem });
-  return crypto.timingSafeEqual(calculado, esperado);
+  if (partes.length !== 4 || partes[0] !== 'pbkdf2-sha256') return false;
+  const iteraciones = Number(partes[1]);
+  if (!Number.isInteger(iteraciones) || iteraciones < 1000 || iteraciones > 5_000_000) return false;
+  return iguales(await pbkdf2(clave, deB64(partes[2]), iteraciones), deB64(partes[3]));
 }
 
-// Hash ficticio para igualar tiempos cuando el usuario no existe (evita enumeración por tiempo).
-let hashFicticio;
-async function verificarFicticio(clave) {
-  hashFicticio = hashFicticio || (await hashClave(crypto.randomBytes(16).toString('hex')));
-  await verificarClave(clave, hashFicticio);
+// Cálculo equivalente cuando el usuario no existe: iguala tiempos y evita enumerar cuentas.
+export async function verificarFicticio(clave, iteraciones = 600000) {
+  await pbkdf2(clave, aleatorio(16), iteraciones);
   return false;
 }
 
-// ---------- tokens ----------
+// ---------- tokens y códigos ----------
 
 const ALFABETO = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 32 símbolos, sin 0/O ni 1/I
 
-function codigoAleatorio(largo) {
+export function codigoAleatorio(largo) {
   let s = '';
-  for (const b of crypto.randomBytes(largo)) s += ALFABETO[b & 31];
+  for (const b of aleatorio(largo)) s += ALFABETO[b & 31];
   return s;
 }
 
-const tokenSesion = () => crypto.randomBytes(32).toString('base64url');
-const sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');
+export const tokenSesion = () => Buffer.from(aleatorio(32)).toString('base64url');
 
-// ---------- cifrado de datos personales en reposo (AES-256-GCM) ----------
-
-function cargarClaveMaestra(archivo, desdeEntorno) {
-  if (desdeEntorno) {
-    const k = Buffer.from(desdeEntorno, 'base64');
-    if (k.length !== 32) throw new Error('DATA_KEY debe ser 32 bytes en base64 (openssl rand -base64 32)');
-    return k;
-  }
-  if (fs.existsSync(archivo)) return Buffer.from(fs.readFileSync(archivo, 'utf8').trim(), 'base64');
-  const k = crypto.randomBytes(32);
-  fs.writeFileSync(archivo, k.toString('base64') + '\n', { mode: 0o600, flag: 'wx' });
-  console.warn(`[seguridad] Se generó una clave de cifrado en ${archivo}. En producción define DATA_KEY y respáldala fuera del servidor.`);
-  return k;
+export async function sha256(texto) {
+  return aHex(await subtle.digest('SHA-256', enc.encode(String(texto))));
 }
 
-function crearCifrador(claveMaestra) {
-  const derivar = (info) => Buffer.from(crypto.hkdfSync('sha256', claveMaestra, Buffer.alloc(0), info, 32));
-  const kCifrado = derivar('evento:cifrado:v1');
-  const kIndice = derivar('evento:indice:v1');
+// ---------- cifrado de datos personales en reposo ----------
+
+// A partir de la clave maestra (32 bytes en base64) se derivan claves independientes con HKDF:
+//  - AES-256-GCM para correo y teléfono
+//  - HMAC para el índice ciego del correo (búsqueda exacta sin guardarlo en claro)
+//  - HMAC para los códigos de acceso de estudiantes (secretos aleatorios de 40 bits)
+export async function crearCifrador(claveMaestraB64) {
+  const maestra = deB64(String(claveMaestraB64 || ''));
+  if (maestra.length !== 32) throw new Error('DATA_KEY debe ser de 32 bytes en base64 (openssl rand -base64 32).');
+  const ikm = await subtle.importKey('raw', maestra, 'HKDF', false, ['deriveKey']);
+  const derivar = (info, alg, usos) => subtle.deriveKey(
+    { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: enc.encode(info) }, ikm, alg, false, usos);
+  const kCifrado = await derivar('evento:cifrado:v1', { name: 'AES-GCM', length: 256 }, ['encrypt', 'decrypt']);
+  const kIndice = await derivar('evento:indice:v1', { name: 'HMAC', hash: 'SHA-256', length: 256 }, ['sign']);
+  const kCodigo = await derivar('evento:codigo-acceso:v1', { name: 'HMAC', hash: 'SHA-256', length: 256 }, ['sign']);
+
   return {
-    cifrar(texto) {
+    async cifrar(texto) {
       if (texto == null || texto === '') return null;
-      const iv = crypto.randomBytes(12);
-      const c = crypto.createCipheriv('aes-256-gcm', kCifrado, iv);
-      const ct = Buffer.concat([c.update(String(texto), 'utf8'), c.final()]);
-      return 'v1:' + Buffer.concat([iv, c.getAuthTag(), ct]).toString('base64');
+      const iv = aleatorio(12);
+      const ct = new Uint8Array(await subtle.encrypt({ name: 'AES-GCM', iv }, kCifrado, enc.encode(String(texto))));
+      const out = new Uint8Array(12 + ct.length);
+      out.set(iv);
+      out.set(ct, 12);
+      return 'v1:' + aB64(out);
     },
-    descifrar(valor) {
+    async descifrar(valor) {
       if (!valor) return null;
-      const b = Buffer.from(String(valor).slice(3), 'base64');
-      const d = crypto.createDecipheriv('aes-256-gcm', kCifrado, b.subarray(0, 12));
-      d.setAuthTag(b.subarray(12, 28));
-      return Buffer.concat([d.update(b.subarray(28)), d.final()]).toString('utf8');
+      const b = deB64(String(valor).slice(3));
+      return dec.decode(await subtle.decrypt({ name: 'AES-GCM', iv: b.subarray(0, 12) }, kCifrado, b.subarray(12)));
     },
-    // Índice ciego: permite buscar por igualdad sin guardar el dato en claro.
-    indice: (texto) => crypto.createHmac('sha256', kIndice).update(String(texto).toLowerCase()).digest('hex'),
+    indice: async (texto) => aHex(await subtle.sign('HMAC', kIndice, enc.encode(String(texto).toLowerCase()))),
+    hashCodigo: async (codigo) => 'hmac$' + aHex(await subtle.sign('HMAC', kCodigo, enc.encode(String(codigo).toUpperCase()))),
   };
 }
 
-// ---------- limitador de intentos ----------
+// ---------- limitador de intentos (en memoria del Durable Object) ----------
 
-function crearLimitador() {
+export function crearLimitador() {
   const mapa = new Map();
-  const timer = setInterval(() => {
-    const t = Date.now();
-    for (const [k, v] of mapa) if (v.hasta < t) mapa.delete(k);
-  }, 60_000);
-  timer.unref();
+  let ultimaLimpieza = Date.now();
   return {
     permitir(clave, maximo, ventanaMs) {
       const t = Date.now();
+      if (t - ultimaLimpieza > 60_000) {
+        for (const [k, v] of mapa) if (v.hasta < t) mapa.delete(k);
+        ultimaLimpieza = t;
+      }
       const c = mapa.get(clave);
       if (!c || c.hasta < t) {
         mapa.set(clave, { n: 1, hasta: t + ventanaMs });
@@ -106,31 +117,36 @@ function crearLimitador() {
       c.n += 1;
       return c.n <= maximo;
     },
-    reiniciar: (clave) => mapa.delete(clave),
-    detener: () => clearInterval(timer),
   };
 }
 
 // ---------- imágenes ----------
 
-// Valida que el archivo sea un JPEG y elimina metadatos (EXIF/GPS, XMP, comentarios).
-function limpiarJPEG(buf) {
-  if (!Buffer.isBuffer(buf) || buf.length < 4 || buf[0] !== 0xff || buf[1] !== 0xd8) return null;
+// Valida que sea un JPEG y elimina metadatos (EXIF/GPS, XMP, comentarios). Devuelve null si no es válido.
+export function limpiarJPEG(entrada) {
+  const buf = entrada instanceof Uint8Array ? entrada : new Uint8Array(entrada);
+  if (buf.length < 4 || buf[0] !== 0xff || buf[1] !== 0xd8) return null;
   const partes = [buf.subarray(0, 2)];
+  const unir = () => {
+    const total = partes.reduce((n, p) => n + p.length, 0);
+    const out = new Uint8Array(total);
+    let o = 0;
+    for (const p of partes) { out.set(p, o); o += p.length; }
+    return out;
+  };
   let i = 2;
   while (i < buf.length) {
     if (buf[i] !== 0xff) return null;
     const tipo = buf[i + 1];
     if (tipo === 0xff) { i += 1; continue; }
-    if (tipo === 0xd9) { partes.push(buf.subarray(i, i + 2)); return Buffer.concat(partes); }
+    if (tipo === 0xd9) { partes.push(buf.subarray(i, i + 2)); return unir(); }
     if (tipo === 0x01 || (tipo >= 0xd0 && tipo <= 0xd7)) { partes.push(buf.subarray(i, i + 2)); i += 2; continue; }
     if (i + 4 > buf.length) return null;
-    const largo = buf.readUInt16BE(i + 2);
+    const largo = (buf[i + 2] << 8) | buf[i + 3];
     if (largo < 2 || i + 2 + largo > buf.length) return null;
     if (tipo === 0xda) {
-      // Inicio de datos de imagen: se copia el resto tal cual.
       partes.push(buf.subarray(i));
-      const limpio = Buffer.concat(partes);
+      const limpio = unir();
       return limpio[limpio.length - 2] === 0xff && limpio[limpio.length - 1] === 0xd9 ? limpio : null;
     }
     const metadato = (tipo >= 0xe1 && tipo <= 0xef) || tipo === 0xfe;
@@ -139,8 +155,3 @@ function limpiarJPEG(buf) {
   }
   return null;
 }
-
-module.exports = {
-  hashClave, verificarClave, verificarFicticio, codigoAleatorio, tokenSesion, sha256,
-  cargarClaveMaestra, crearCifrador, crearLimitador, limpiarJPEG,
-};

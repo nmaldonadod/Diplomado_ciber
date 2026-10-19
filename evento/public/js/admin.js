@@ -135,7 +135,37 @@ async function vistaEvento() {
     });
     toast('Evento guardado');
   });
-  return [el('div', { class: 'barra-acciones' }, el('h1', null, 'Datos del evento')), form];
+  // Importar agenda y talleres desde un archivo JSON (mismo formato que config/mes-ciberseguridad-2026.json).
+  const resultado = el('p', { class: 'sub', 'aria-live': 'polite' });
+  const archivo = el('input', { id: 'f-importar', type: 'file', accept: 'application/json,.json', class: 'sr' });
+  archivo.addEventListener('change', async () => {
+    const f = archivo.files[0];
+    archivo.value = '';
+    if (!f) return;
+    try {
+      if (f.size > 120 * 1024) throw new Error('El archivo es demasiado grande.');
+      let datos;
+      try {
+        datos = JSON.parse(await f.text());
+      } catch {
+        throw new Error('El archivo no es un JSON válido.');
+      }
+      if (!confirm('Se reemplazará la agenda y se actualizarán los talleres (por sala y día). Las inscripciones y fotos se conservan. ¿Continuar?')) return;
+      const r = await llamar('POST', '/api/admin/importar', { datos });
+      resultado.textContent = `Listo: ${r.actividades} actividades, ${r.creados} talleres nuevos y ${r.actualizados} actualizados.`;
+      toast('Evento actualizado desde el archivo');
+    } catch (e) {
+      resultado.textContent = e.datos?.errores?.archivo || e.message;
+      toast('No se pudo importar el archivo', 'error');
+    }
+  });
+  const importar = el('section', { class: 'card', style: { marginTop: '16px' } },
+    el('h2', null, 'Importar desde archivo'),
+    el('p', { class: 'sub' }, 'Carga o actualiza datos del evento, agenda y talleres desde un archivo JSON. Los talleres se reconocen por sala y día, sin perder inscripciones ni fotos.'),
+    el('div', { class: 'acciones' }, el('label', { class: 'btn btn-contorno btn-chico', for: 'f-importar' }, 'Elegir archivo JSON'), archivo),
+    resultado);
+
+  return [el('div', { class: 'barra-acciones' }, el('h1', null, 'Datos del evento')), form, importar];
 }
 
 // =====================================================================

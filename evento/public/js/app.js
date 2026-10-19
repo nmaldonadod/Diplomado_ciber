@@ -45,9 +45,10 @@ const talleresTxt = (n) => (n === 1 ? '1 taller' : `${n} talleres`);
 // Motivo por el que no se puede elegir un taller dada una selección (null = se puede).
 function motivoBloqueo(t, seleccion) {
   if (quedan(t) <= 0) return 'Sin cupos';
+  const max = ev().maxTalleres;
+  if (max === 1 && seleccion.length >= 1) return 'Ya elegiste tu taller';
   const choque = seleccion.find((m) => m.id !== t.id && seCruzan(m, t));
   if (choque) return `Tope de horario con «${choque.titulo}»`;
-  const max = ev().maxTalleres;
   if (max && seleccion.length >= max) return `Máximo ${talleresTxt(max)}`;
   return null;
 }

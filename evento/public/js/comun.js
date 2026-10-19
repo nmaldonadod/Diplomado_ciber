@@ -132,14 +132,37 @@ function chipCupo(c) {
   return el('span', { class: 'chip ok' }, 'Disponible');
 }
 
-// Suscripción en tiempo real (Server-Sent Events) con reconexión automática del navegador.
+// Suscripción en tiempo real por WebSocket, con reconexión automática.
 //  - cupos:  cambian las inscripciones a talleres
 //  - evento: el administrador modificó agenda, talleres o datos del evento
 function suscribirCambios({ cupos, evento, conexion }) {
-  const es = new EventSource('/api/stream');
-  if (cupos) es.addEventListener('cupos', (ev) => cupos(JSON.parse(ev.data)));
-  if (evento) es.addEventListener('evento', () => evento());
-  es.addEventListener('open', () => conexion?.(true));
-  es.addEventListener('error', () => conexion?.(false));
-  return es;
+  let intentos = 0;
+  let latido;
+  function conectar() {
+    const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/tiempo-real`);
+    ws.addEventListener('open', () => {
+      intentos = 0;
+      conexion?.(true);
+      latido = setInterval(() => ws.readyState === 1 && ws.send('ping'), 30_000);
+    });
+    ws.addEventListener('message', (ev) => {
+      if (ev.data === 'pong') return;
+      let m;
+      try {
+        m = JSON.parse(ev.data);
+      } catch {
+        return;
+      }
+      if (m.tipo === 'cupos') cupos?.(m.datos);
+      if (m.tipo === 'evento') evento?.();
+    });
+    ws.addEventListener('close', () => {
+      clearInterval(latido);
+      conexion?.(false);
+      // Espera creciente (máx. 30 s) con algo de azar para no reconectar todos a la vez.
+      const espera = Math.min(30_000, 1000 * 2 ** intentos++) + Math.random() * 1000;
+      setTimeout(conectar, espera);
+    });
+  }
+  conectar();
 }

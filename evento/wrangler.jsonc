@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mes-ciberseguridad-inacap",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+
+  // Archivos estáticos (frontend). El Worker atiende primero cada petición para
+  // aplicar cabeceras de seguridad y enrutar /admin, /acreditacion, etc.
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "html_handling": "none",
+    "not_found_handling": "none"
+  },
+
+  // Un único Durable Object con SQLite: base de datos, reglas de cupos y tiempo real.
+  "durable_objects": {
+    "bindings": [{ "name": "EVENTO", "class_name": "EventoDO" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["EventoDO"] }],
+
+  // Fotos de docentes (sin metadatos, nombres aleatorios).
+  "r2_buckets": [{ "binding": "FOTOS", "bucket_name": "mes-ciberseguridad-fotos" }],
+
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+
+  // Secretos (wrangler secret put): DATA_KEY, TOKEN_CONFIGURACION
+  "vars": { "ITERACIONES_CLAVE": "600000" }
+}

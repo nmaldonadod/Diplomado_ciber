@@ -1,6 +1,5 @@
-'use strict';
-
-const { ErrorNegocio } = require('./db');
+// Utilidades HTTP sobre la Fetch API (Cloudflare Workers).
+import { ErrorNegocio } from './db.js';
 
 const CSP = [
   "default-src 'self'",
@@ -18,107 +17,108 @@ const CSP = [
   "frame-ancestors 'none'",
 ].join('; ');
 
-function cabecerasSeguridad(https) {
-  const h = {
-    'Content-Security-Policy': CSP,
-    'X-Content-Type-Options': 'nosniff',
-    'Referrer-Policy': 'no-referrer',
-    'X-Frame-Options': 'DENY',
-    'Cross-Origin-Opener-Policy': 'same-origin',
-    'Cross-Origin-Resource-Policy': 'same-origin',
-    'Permissions-Policy': 'camera=(self), microphone=(), geolocation=(), payment=(), usb=()',
-  };
-  if (https) h['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains';
-  return h;
+// Se aplican a todas las respuestas (páginas, archivos y API) desde el Worker.
+export function aplicarCabecerasSeguridad(headers, https) {
+  headers.set('Content-Security-Policy', CSP);
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('Referrer-Policy', 'no-referrer');
+  headers.set('X-Frame-Options', 'DENY');
+  headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  headers.set('Cross-Origin-Resource-Policy', 'same-origin');
+  headers.set('Permissions-Policy', 'camera=(self), microphone=(), geolocation=(), payment=(), usb=()');
+  if (https) headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 }
 
-function crearHttp({ trustProxy }) {
-  const esHttps = (req) => Boolean(req.socket.encrypted) || (trustProxy && req.headers['x-forwarded-proto'] === 'https');
+export function json(status, cuerpo, extra = {}) {
+  return new Response(JSON.stringify(cuerpo), {
+    status,
+    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...extra },
+  });
+}
 
-  function enviar(req, res, status, cuerpo, tipo = 'application/json; charset=utf-8', extra = {}) {
-    const datos = typeof cuerpo === 'string' || Buffer.isBuffer(cuerpo) ? cuerpo : JSON.stringify(cuerpo);
-    res.writeHead(status, { ...cabecerasSeguridad(esHttps(req)), 'Content-Type': tipo, 'Cache-Control': 'no-store', ...extra });
-    res.end(req.method === 'HEAD' ? undefined : datos);
-  }
-
-  function leerCuerpo(req, { max, tipos }) {
-    return new Promise((resolve, reject) => {
-      const tipo = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
-      if (!tipos.includes(tipo)) return reject(new ErrorNegocio('TIPO_INVALIDO', 'Tipo de contenido no permitido.', 415));
-      const declarado = Number(req.headers['content-length']);
-      if (declarado > max) return reject(new ErrorNegocio('MUY_GRANDE', 'Solicitud demasiado grande.', 413));
-      let total = 0;
-      const partes = [];
-      req.on('data', (c) => {
-        total += c.length;
-        if (total > max) {
-          reject(new ErrorNegocio('MUY_GRANDE', 'Solicitud demasiado grande.', 413));
-          req.destroy();
-        } else partes.push(c);
-      });
-      req.on('end', () => resolve(Buffer.concat(partes)));
-      req.on('error', reject);
-    });
-  }
-
-  async function leerJSON(req) {
-    const buf = await leerCuerpo(req, { max: 32 * 1024, tipos: ['application/json'] });
+// Contexto de una petición: URL, IP real del cliente (la pone Cloudflare) y cookies.
+export function contexto(req) {
+  const url = new URL(req.url);
+  const cookies = {};
+  for (const parte of String(req.headers.get('Cookie') || '').split(';')) {
+    const i = parte.indexOf('=');
+    if (i <= 0) continue;
     try {
-      const obj = JSON.parse(buf.toString('utf8') || '{}');
-      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) throw new Error();
-      return obj;
-    } catch {
-      throw new ErrorNegocio('JSON_INVALIDO', 'JSON inválido.', 400);
-    }
+      cookies[parte.slice(0, i).trim()] = decodeURIComponent(parte.slice(i + 1).trim());
+    } catch { /* cookie mal formada: se ignora */ }
   }
-
-  function leerCookies(req) {
-    const out = {};
-    for (const parte of String(req.headers.cookie || '').split(';')) {
-      const i = parte.indexOf('=');
-      if (i <= 0) continue;
-      try {
-        out[parte.slice(0, i).trim()] = decodeURIComponent(parte.slice(i + 1).trim());
-      } catch { /* cookie mal formada: se ignora */ }
-    }
-    return out;
-  }
-
-  // Bajo HTTPS se usa el prefijo __Host- (obliga Secure, Path=/ y sin Domain).
-  const nombreCookie = (req, base) => (esHttps(req) ? `__Host-${base}` : base);
-  const leerCookie = (req, base) => leerCookies(req)[nombreCookie(req, base)];
-
-  function cookie(req, base, valor, { maxAge, sameSite = 'Lax' }) {
-    return [
-      `${nombreCookie(req, base)}=${encodeURIComponent(valor)}`, 'Path=/', 'HttpOnly', `SameSite=${sameSite}`,
-      `Max-Age=${maxAge}`, esHttps(req) ? 'Secure' : '',
-    ].filter(Boolean).join('; ');
-  }
-
-  function ip(req) {
-    if (trustProxy && req.headers['x-forwarded-for']) return String(req.headers['x-forwarded-for']).split(',')[0].trim().slice(0, 64);
-    return req.socket.remoteAddress || '?';
-  }
-
-  // Protección CSRF: las peticiones que modifican datos deben originarse en este mismo sitio.
-  function mismoOrigen(req) {
-    const origen = req.headers.origin;
-    if (origen) {
-      try {
-        return new URL(origen).host === req.headers.host;
-      } catch {
-        return false;
-      }
-    }
-    const sfs = req.headers['sec-fetch-site'];
-    return !sfs || sfs === 'same-origin' || sfs === 'none';
-  }
-
-  return { esHttps, enviar, leerCuerpo, leerJSON, leerCookie, cookie, ip, mismoOrigen };
+  return {
+    req,
+    url,
+    https: url.protocol === 'https:',
+    ip: (req.headers.get('CF-Connecting-IP') || '127.0.0.1').slice(0, 64),
+    cookies,
+  };
 }
 
-// Enrutador mínimo con parámetros (:id) y metadatos por ruta (rol requerido, etc.).
-function crearRouter() {
+// Bajo HTTPS se usa el prefijo __Host- (obliga Secure, Path=/ y sin Domain).
+const nombreCookie = (c, base) => (c.https ? `__Host-${base}` : base);
+export const leerCookie = (c, base) => c.cookies[nombreCookie(c, base)];
+
+export function cookie(c, base, valor, { maxAge, sameSite = 'Lax' }) {
+  return [
+    `${nombreCookie(c, base)}=${encodeURIComponent(valor)}`, 'Path=/', 'HttpOnly', `SameSite=${sameSite}`,
+    `Max-Age=${maxAge}`, c.https ? 'Secure' : '',
+  ].filter(Boolean).join('; ');
+}
+
+// Protección CSRF: las peticiones que modifican datos deben originarse en este mismo sitio.
+export function mismoOrigen(c) {
+  const origen = c.req.headers.get('Origin');
+  if (origen) {
+    try {
+      return new URL(origen).host === c.url.host;
+    } catch {
+      return false;
+    }
+  }
+  const sfs = c.req.headers.get('Sec-Fetch-Site');
+  return !sfs || sfs === 'same-origin' || sfs === 'none';
+}
+
+// Lee el cuerpo con límite de tamaño, sin cargar más de lo permitido en memoria.
+export async function leerCuerpo(req, { max, tipos }) {
+  const tipo = String(req.headers.get('Content-Type') || '').split(';')[0].trim().toLowerCase();
+  if (!tipos.includes(tipo)) throw new ErrorNegocio('TIPO_INVALIDO', 'Tipo de contenido no permitido.', 415);
+  if (Number(req.headers.get('Content-Length')) > max) throw new ErrorNegocio('MUY_GRANDE', 'Solicitud demasiado grande.', 413);
+  if (!req.body) return new Uint8Array(0);
+  const lector = req.body.getReader();
+  const partes = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await lector.read();
+    if (done) break;
+    total += value.length;
+    if (total > max) {
+      await lector.cancel();
+      throw new ErrorNegocio('MUY_GRANDE', 'Solicitud demasiado grande.', 413);
+    }
+    partes.push(value);
+  }
+  const out = new Uint8Array(total);
+  let o = 0;
+  for (const p of partes) { out.set(p, o); o += p.length; }
+  return out;
+}
+
+export async function leerJSON(req, max = 32 * 1024) {
+  const bytes = await leerCuerpo(req, { max, tipos: ['application/json'] });
+  try {
+    const obj = JSON.parse(new TextDecoder().decode(bytes) || '{}');
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) throw new Error();
+    return obj;
+  } catch {
+    throw new ErrorNegocio('JSON_INVALIDO', 'JSON inválido.', 400);
+  }
+}
+
+// Enrutador mínimo con parámetros (:id) y metadatos por ruta (rol requerido).
+export function crearRouter() {
   const rutas = [];
   return {
     agregar(metodo, patron, fn, opciones = {}) {
@@ -141,5 +141,3 @@ function crearRouter() {
     },
   };
 }
-
-module.exports = { crearHttp, crearRouter, cabecerasSeguridad };
