@@ -13,18 +13,110 @@
     "talleres_abiertos": 1
   },
   "agenda": [
-    { "tipo": "acreditacion", "inicio": "2026-10-21T14:15", "fin": "2026-10-21T14:30", "titulo": "Ingreso y acreditación", "descripcion": "Actividad central", "expositor": "", "lugar": "Aula Magna" },
-    { "tipo": "charla", "inicio": "2026-10-21T14:30", "fin": "2026-10-21T15:00", "titulo": "Apertura institucional", "descripcion": "", "expositor": "Nicolás Valdivieso / Gonzalo Labra", "lugar": "Aula Magna" },
-    { "tipo": "charla", "inicio": "2026-10-21T15:00", "fin": "2026-10-21T15:25", "titulo": "Charla principal 1", "descripcion": "De la preparación a la implementación: roadmap de migración a PQC.", "expositor": "Paulina Assmann", "lugar": "Aula Magna" },
-    { "tipo": "charla", "inicio": "2026-10-21T15:25", "fin": "2026-10-21T15:50", "titulo": "Charla principal 2", "descripcion": "Investigación Criminal en el Ciberespacio: El Rol de la PDI", "expositor": "Danic Maldonado", "lugar": "Aula Magna" },
-    { "tipo": "pausa", "inicio": "2026-10-21T15:50", "fin": "2026-10-21T16:10", "titulo": "Break y distribución a talleres", "descripcion": "", "expositor": "", "lugar": "" },
-    { "tipo": "actividad", "inicio": "2026-10-21T16:10", "fin": "2026-10-21T17:30", "titulo": "Talleres simultáneos", "descripcion": "Lab 404 · Lab 409 · CREA Empresa · Sala 101", "expositor": "", "lugar": "" },
-    { "tipo": "charla", "inicio": "2026-10-21T17:30", "fin": "2026-10-21T17:40", "titulo": "Cierre de jornada", "descripcion": "", "expositor": "", "lugar": "Aula Magna" }
+    {
+      "tipo": "acreditacion",
+      "inicio": "2026-10-21T14:15",
+      "fin": "2026-10-21T14:30",
+      "titulo": "Ingreso y acreditación",
+      "descripcion": "Actividad central",
+      "expositor": "",
+      "lugar": "Aula Magna"
+    },
+    {
+      "tipo": "charla",
+      "inicio": "2026-10-21T14:30",
+      "fin": "2026-10-21T15:00",
+      "titulo": "Apertura institucional",
+      "descripcion": "",
+      "expositor": "Nicolás Valdivieso / Gonzalo Labra",
+      "lugar": "Aula Magna"
+    },
+    {
+      "tipo": "charla",
+      "inicio": "2026-10-21T15:00",
+      "fin": "2026-10-21T15:25",
+      "titulo": "Charla principal 1",
+      "descripcion": "De la preparación a la implementación: roadmap de migración a PQC.",
+      "expositor": "Paulina Assmann",
+      "lugar": "Aula Magna"
+    },
+    {
+      "tipo": "charla",
+      "inicio": "2026-10-21T15:25",
+      "fin": "2026-10-21T15:50",
+      "titulo": "Charla principal 2",
+      "descripcion": "Investigación Criminal en el Ciberespacio: El Rol de la PDI",
+      "expositor": "Danic Maldonado",
+      "lugar": "Aula Magna"
+    },
+    {
+      "tipo": "pausa",
+      "inicio": "2026-10-21T15:50",
+      "fin": "2026-10-21T16:10",
+      "titulo": "Break y distribución a talleres",
+      "descripcion": "",
+      "expositor": "",
+      "lugar": ""
+    },
+    {
+      "tipo": "actividad",
+      "inicio": "2026-10-21T16:10",
+      "fin": "2026-10-21T17:30",
+      "titulo": "Talleres simultáneos",
+      "descripcion": "Lab 404 · Lab 409 · CREA Empresa · Sala 101",
+      "expositor": "",
+      "lugar": ""
+    },
+    {
+      "tipo": "charla",
+      "inicio": "2026-10-21T17:30",
+      "fin": "2026-10-21T17:40",
+      "titulo": "Cierre de jornada",
+      "descripcion": "",
+      "expositor": "",
+      "lugar": "Aula Magna"
+    }
   ],
   "talleres": [
-    { "titulo": "Taller · Lab 404", "descripcion": "", "docente": "", "sala": "Lab 404", "inicio": "2026-10-21T16:10", "fin": "2026-10-21T17:30", "cupos": 30, "publicado": false },
-    { "titulo": "Taller · Lab 409", "descripcion": "", "docente": "", "sala": "Lab 409", "inicio": "2026-10-21T16:10", "fin": "2026-10-21T17:30", "cupos": 30, "publicado": false },
-    { "titulo": "Taller · CREA Empresa", "descripcion": "", "docente": "", "sala": "CREA Empresa", "inicio": "2026-10-21T16:10", "fin": "2026-10-21T17:30", "cupos": 30, "publicado": false },
-    { "titulo": "Taller · Sala 101", "descripcion": "", "docente": "", "sala": "Sala 101", "inicio": "2026-10-21T16:10", "fin": "2026-10-21T17:30", "cupos": 30, "publicado": false }
+    {
+      "titulo": "Dentro de un ciberataque: investigación de amenazas con XDR e inteligencia artificial",
+      "descripcion": "Taller práctico e interactivo donde los estudiantes conocerán cómo se detectan, investigan y responden ciberataques mediante tecnologías XDR.\n\nA través de una demostración con ESET Inspect, explorarán el análisis de comportamientos sospechosos, la investigación de incidentes y el uso de MITRE ATT&CK.\n\nAdemás, participarán en un desafío práctico utilizando sus teléfonos e inteligencia artificial para analizar un fragmento de código malicioso, identificar amenazas y contrastar sus hallazgos con las capacidades de XDR.",
+      "docente": "André Goujon Maucher, CEO y cofundador de Lockbits",
+      "sala": "Sala 101",
+      "inicio": "2026-10-21T16:10",
+      "fin": "2026-10-21T17:25",
+      "cupos": 45,
+      "publicado": true
+    },
+    {
+      "titulo": "Taller de análisis de malware",
+      "descripcion": "Taller práctico orientado a la implementación y configuración de un laboratorio para el análisis de malware en un entorno controlado. Posteriormente, se llevará a cabo un análisis técnico del troyano bancario Zeus, con el propósito de estudiar sus características, mecanismos de funcionamiento y técnicas de ataque.",
+      "docente": "Esteban Rojas",
+      "sala": "Lab 404",
+      "inicio": "2026-10-21T16:10",
+      "fin": "2026-10-21T17:30",
+      "cupos": 30,
+      "publicado": true
+    },
+    {
+      "titulo": "Taller · Lab 409",
+      "descripcion": "",
+      "docente": "",
+      "sala": "Lab 409",
+      "inicio": "2026-10-21T16:10",
+      "fin": "2026-10-21T17:30",
+      "cupos": 30,
+      "publicado": false
+    },
+    {
+      "titulo": "Taller · CREA Empresa",
+      "descripcion": "",
+      "docente": "",
+      "sala": "CREA Empresa",
+      "inicio": "2026-10-21T16:10",
+      "fin": "2026-10-21T17:30",
+      "cupos": 30,
+      "publicado": false
+    }
   ]
 }

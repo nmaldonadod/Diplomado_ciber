@@ -140,8 +140,12 @@ function abrirDB(archivo, cifrador) {
     db.exec("ALTER TABLE evento ADD COLUMN lema TEXT NOT NULL DEFAULT ''");
   }
 
+  // Transacción reentrante: una llamada anidada se une a la transacción en curso.
+  let enTransaccion = false;
   function tx(fn) {
+    if (enTransaccion) return fn();
     db.exec('BEGIN IMMEDIATE');
+    enTransaccion = true;
     try {
       const r = fn();
       db.exec('COMMIT');
@@ -149,6 +153,8 @@ function abrirDB(archivo, cifrador) {
     } catch (e) {
       db.exec('ROLLBACK');
       throw e;
+    } finally {
+      enTransaccion = false;
     }
   }
 
@@ -362,7 +368,9 @@ function abrirDB(archivo, cifrador) {
         if (p('SELECT 1 FROM inscripciones WHERE estudiante_id = ? AND taller_id = ?').get(estudianteId, tallerId)) return false;
         const mios = inscripciones.de(estudianteId);
         if (ev?.max_talleres && mios.length >= ev.max_talleres) {
-          throw new ErrorNegocio('MAXIMO_TALLERES', `Puedes inscribir como máximo ${ev.max_talleres} talleres.`);
+          throw new ErrorNegocio('MAXIMO_TALLERES', ev.max_talleres === 1
+            ? 'Ya tienes un taller: puedes inscribirte en 1 solo. Cancela el actual si quieres cambiarte.'
+            : `Puedes inscribir como máximo ${ev.max_talleres} talleres.`);
         }
         const choque = mios.find((m) => m.inicio < t.fin && t.inicio < m.fin);
         if (choque) throw new ErrorNegocio('CHOQUE_HORARIO', `Tope de horario con «${choque.titulo}».`);

@@ -40,6 +40,7 @@ const seCruzan = (a, b) => a.inicio < b.fin && b.inicio < a.fin;
 const cupoDe = (t) => estado.cupos[t.id] || { cupos: t.cupos, inscritos: 0 };
 const quedan = (t) => cupoDe(t).cupos - cupoDe(t).inscritos;
 const nombreCompleto = (p) => `${p.nombres} ${p.apellidos}`;
+const talleresTxt = (n) => (n === 1 ? '1 taller' : `${n} talleres`);
 
 // Motivo por el que no se puede elegir un taller dada una selección (null = se puede).
 function motivoBloqueo(t, seleccion) {
@@ -47,7 +48,7 @@ function motivoBloqueo(t, seleccion) {
   const choque = seleccion.find((m) => m.id !== t.id && seCruzan(m, t));
   if (choque) return `Tope de horario con «${choque.titulo}»`;
   const max = ev().maxTalleres;
-  if (max && seleccion.length >= max) return `Máximo ${max} talleres`;
+  if (max && seleccion.length >= max) return `Máximo ${talleresTxt(max)}`;
   return null;
 }
 
@@ -138,7 +139,7 @@ function vistaInicio() {
         el('h2', null, '¿Cómo participar?'),
         el('ol', { class: 'pasos' },
           el('li', null, el('span', null, el('strong', null, 'Inscríbete'), ' con tu correo INACAPMAIL. Recibirás tu entrada digital con código QR.')),
-          el('li', null, el('span', null, el('strong', null, 'Elige tus talleres'), ' al inscribirte o después', e.maxTalleres ? ` (hasta ${e.maxTalleres})` : '', '. Los cupos son limitados y se actualizan en vivo.')),
+          el('li', null, el('span', null, el('strong', null, 'Elige tus talleres'), ' al inscribirte o después', e.maxTalleres === 1 ? ' (1 por persona)' : e.maxTalleres ? ` (hasta ${e.maxTalleres})` : '', '. Los cupos son limitados y se actualizan en vivo.')),
           el('li', null, el('span', null, el('strong', null, 'Acredítate'), ' el día del evento mostrando el QR de tu entrada.')))),
       el('section', { class: 'card' },
         el('h2', null, 'Talleres'),
@@ -207,7 +208,7 @@ function vistaRegistro() {
     campo('telefono', 'Teléfono', { type: 'tel', autocomplete: 'tel', required: true, placeholder: '9 1234 5678', maxlength: 16, inputmode: 'tel' }),
     selector && el('fieldset', null,
       el('legend', null, 'Talleres (opcional)'),
-      el('p', { class: 'sub', style: { fontSize: '.86rem' } }, 'Puedes elegirlos ahora o más tarde desde la sección Talleres.', e.maxTalleres ? ` Máximo ${e.maxTalleres}.` : ''),
+      el('p', { class: 'sub', style: { fontSize: '.86rem' } }, 'Puedes elegirlos ahora o más tarde desde la sección Talleres.', e.maxTalleres ? ` Máximo ${talleresTxt(e.maxTalleres)}.` : ''),
       selector),
     el('label', { class: 'check', 'data-campo': 'consentimiento' },
       el('input', { type: 'checkbox', name: 'consentimiento' }),
@@ -424,7 +425,8 @@ function vistaTalleres() {
   return [
     el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' } },
       el('div', null, el('span', { class: 'eyebrow' }, 'Talleres'), el('h1', null, 'Elige tus talleres'),
-        el('p', { class: 'sub' }, e.maxTalleres ? `Puedes inscribir hasta ${e.maxTalleres} talleres sin topes de horario. ` : 'Puedes inscribir talleres sin topes de horario. ',
+        el('p', { class: 'sub' }, e.maxTalleres === 1 ? 'Puedes inscribirte en 1 taller. '
+          : e.maxTalleres ? `Puedes inscribir hasta ${talleresTxt(e.maxTalleres)} sin topes de horario. ` : 'Puedes inscribir talleres sin topes de horario. ',
           'Los cupos se actualizan en tiempo real.')),
       estado.yo && vivo(() => el('span', { class: 'chip fuerte' }, `Elegidos: ${estado.yo.talleres.length}${e.maxTalleres ? ' / ' + e.maxTalleres : ''}`))),
     !estado.yo && el('div', { class: 'aviso info' }, 'Para reservar un cupo primero debes ', el('a', { href: '#/registro' }, 'inscribirte en el evento'), '.'),

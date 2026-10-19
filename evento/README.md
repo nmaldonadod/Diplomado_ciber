@@ -30,7 +30,7 @@ npm start            # la primera vez muestra en consola un token de configuraci
 4. En **Usuarios** crea las cuentas de los acreditadores.
 5. Comparte `https://tu-dominio/` con los estudiantes y `https://tu-dominio/acreditacion` con los acreditadores.
 
-Para cargar de una vez el **Mes de la Ciberseguridad 2026** (agenda completa y los 4 talleres en borrador) ejecuta `npm run cargar-evento` antes de `npm start`. Los datos están en `config/mes-ciberseguridad-2026.json`; sólo se cargan si aún no hay evento configurado.
+Para cargar de una vez el **Mes de la Ciberseguridad 2026** (agenda completa y los 4 talleres en borrador) ejecuta `npm run cargar-evento` antes de `npm start`. Los datos están en `config/mes-ciberseguridad-2026.json`. Si el evento ya está cargado y cambias ese archivo, aplica los cambios con `npm run cargar-evento -- --actualizar`: actualiza datos, agenda y talleres (reconocidos por sala y día) sin perder inscripciones ni fotos.
 
 ### Variables de entorno
 
