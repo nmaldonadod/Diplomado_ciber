@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-# Despliega la plataforma en Cloudflare. Requiere CLOUDFLARE_API_TOKEN y CLOUDFLARE_ACCOUNT_ID en el entorno.
+# Despliega la plataforma en Cloudflare. Usa CLOUDFLARE_API_TOKEN y CLOUDFLARE_ACCOUNT_ID si están en el entorno;
+# si no, la sesión abierta con `npx wrangler login`.
 # Es seguro ejecutarlo varias veces: sólo crea el bucket y los secretos que falten (nunca reemplaza DATA_KEY).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export WRANGLER_SEND_METRICS=false
-: "${CLOUDFLARE_API_TOKEN:?Falta CLOUDFLARE_API_TOKEN}"
-: "${CLOUDFLARE_ACCOUNT_ID:?Falta CLOUDFLARE_ACCOUNT_ID}"
 
 npm ci --no-audit --no-fund
+if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] && ! npx wrangler whoami 2>/dev/null | grep -qi "logged in"; then
+  echo "Falta iniciar sesión en Cloudflare: ejecuta «npx wrangler login» (o define CLOUDFLARE_API_TOKEN y CLOUDFLARE_ACCOUNT_ID)." >&2
+  exit 1
+fi
 npm test
 
 BUCKET=mes-ciberseguridad-fotos

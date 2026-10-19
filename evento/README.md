@@ -72,10 +72,12 @@ Al crearse por primera vez, el Durable Object carga el evento de `config/mes-cib
 Requisitos de la cuenta de Cloudflare: plan **Workers Paid** (US$5/mes: la protección de contraseñas PBKDF2 necesita
 más de los 10 ms de CPU del plan gratuito) y **R2** activado.
 
-Con `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` definidos, basta con:
+Desde tu computador (Node.js 22.13+; en Windows, con Git Bash):
 
 ```bash
 cd evento
+npm ci
+npx wrangler login  # abre el navegador para autorizar tu cuenta (o define CLOUDFLARE_API_TOKEN y CLOUDFLARE_ACCOUNT_ID)
 npm run desplegar   # pruebas, bucket R2, despliegue y secretos que falten; muestra el token del primer administrador
 ```
 
