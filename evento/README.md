@@ -72,6 +72,11 @@ Al crearse por primera vez, el Durable Object carga el evento de `config/mes-cib
 Requisitos de la cuenta de Cloudflare: plan **Workers Paid** (US$5/mes: la protección de contraseñas PBKDF2 necesita
 más de los 10 ms de CPU del plan gratuito) y **R2** activado.
 
+> El WebCrypto de Cloudflare Workers (`workerd`) no acepta PBKDF2 con más de **100.000** iteraciones
+> (`NotSupportedError: iteration counts above 100000 are not supported`), así que en Cloudflare `ITERACIONES_CLAVE`
+> está fijado en 100.000 (`wrangler.jsonc`), no en los 600.000 que recomienda OWASP. Ejecutando con Docker/Node
+> sí se puede usar 600.000 (variable `ITERACIONES_CLAVE` en `compose.yaml`/`.env`).
+
 Desde tu computador (Node.js 22.13+; en Windows, con Git Bash):
 
 ```bash
@@ -104,7 +109,7 @@ administrador (el token deja de servir apenas existe uno). En **Usuarios** crea 
 |---|---|---|
 | `DATA_KEY` | secreto | 32 bytes en base64. Sin ella la API responde «falta configurar» (falla cerrada). |
 | `TOKEN_CONFIGURACION` | secreto | Token de un solo uso para crear el primer administrador. |
-| `ITERACIONES_CLAVE` | variable | Iteraciones PBKDF2 para contraseñas del staff (por defecto 600.000, recomendación OWASP). |
+| `ITERACIONES_CLAVE` | variable | Iteraciones PBKDF2 para contraseñas del staff (recomendación OWASP: 600.000; en Cloudflare Workers, tope del runtime: 100.000). |
 | `EVENTO_INICIAL` | variable | `no` desactiva la carga automática del evento de `config/`. |
 
 ### Actualizar agenda o talleres

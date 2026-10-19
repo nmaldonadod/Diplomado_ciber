@@ -29,5 +29,8 @@
   "observability": { "enabled": true, "head_sampling_rate": 1 },
 
   // Secretos (wrangler secret put): DATA_KEY, TOKEN_CONFIGURACION
-  "vars": { "ITERACIONES_CLAVE": "600000" }
+  // El WebCrypto de Cloudflare Workers (workerd) rechaza PBKDF2 con más de 100.000 iteraciones
+  // ("iteration counts above 100000 are not supported"), así que no se puede usar la recomendación
+  // OWASP de 600.000 aquí; 100.000 es el máximo que el runtime permite.
+  "vars": { "ITERACIONES_CLAVE": "100000" }
 }
