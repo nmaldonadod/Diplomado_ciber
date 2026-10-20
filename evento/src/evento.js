@@ -187,6 +187,7 @@ export class EventoDO {
       sedes: v.SEDES,
       dominioCorreo: v.DOMINIO_CORREO,
       tiposParticipante: v.TIPOS_PARTICIPANTE,
+      dominiosPermitidos: v.DOMINIOS_PERMITIDOS,
       niveles: v.NIVELES,
       agenda: this.db.agenda.listar(),
       talleres: this.db.talleres.listar(true).map((t) => this.tallerPublico(t)),

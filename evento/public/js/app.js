@@ -241,6 +241,8 @@ function vistaRegistro() {
   // ---------- paso 1: datos y talleres ----------
   const TIPOS = ETIQUETA_TIPO;
   const dominios = estado.datos.tiposParticipante || { estudiante: estado.datos.dominioCorreo };
+  // Dominios que de verdad se aceptan por tipo (p. ej. los docentes usan @inacap.cl y @inacapmail.cl).
+  const dominiosPermitidos = estado.datos.dominiosPermitidos || Object.fromEntries(Object.entries(dominios).map(([t, d]) => [t, [d]]));
   const tipoSel = el('div', { class: 'selector-tipo', role: 'radiogroup', 'aria-label': 'Tipo de participante', 'data-campo': 'tipo' },
     Object.entries(TIPOS).map(([valor, texto]) => el('label', null,
       el('input', { type: 'radio', name: 'tipo', value: valor, checked: valor === 'estudiante' }),
@@ -295,8 +297,13 @@ function vistaRegistro() {
     };
   }
 
-  // Valida el correo según el dominio que corresponde al tipo de participante.
-  const correoDelTipo = (email, tipo) => correoValido(email) && email.trim().toLowerCase().endsWith('@' + dominios[tipo]);
+  // Valida el correo según los dominios que corresponden al tipo de participante.
+  const correoDelTipo = (email, tipo) => {
+    if (!correoValido(email)) return false;
+    const dominio = email.trim().toLowerCase().split('@')[1];
+    return (dominiosPermitidos[tipo] || [dominios[tipo]]).includes(dominio);
+  };
+  const dominiosTxt = (tipo) => (dominiosPermitidos[tipo] || [dominios[tipo]]).map((d) => '@' + d).join(' o ');
 
   form.addEventListener('submit', (evt) => {
     evt.preventDefault();
@@ -305,7 +312,7 @@ function vistaRegistro() {
     if (d.nombres.length < 2) errores.nombres = 'Ingresa tus nombres.';
     if (d.apellidos.length < 2) errores.apellidos = 'Ingresa tus apellidos.';
     if (!rutValido(d.rut)) errores.rut = 'RUT inválido. Revisa el dígito verificador.';
-    if (!correoDelTipo(d.email, d.tipo)) errores.email = `Usa tu correo institucional @${dominios[d.tipo]}.`;
+    if (!correoDelTipo(d.email, d.tipo)) errores.email = `Usa tu correo institucional (${dominiosTxt(d.tipo)}).`;
     if (!telefonoValido(d.telefono)) errores.telefono = 'Teléfono inválido (ej: 9 1234 5678).';
     if (!d.sede) errores.sede = 'Selecciona tu sede.';
     mostrarErrores(form, errores);

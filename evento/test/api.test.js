@@ -94,13 +94,19 @@ test('flujo completo: admin configura → estudiante se inscribe con taller → 
   r = await beto('POST', `/api/talleres/${tallerId}/inscripcion`, {});
   assert.equal(r.body.error, 'SIN_CUPOS');
 
-  // Docentes y administrativos se inscriben con su correo @inacap.cl.
+  // Los docentes usan tanto @inacap.cl como @inacapmail.cl; los administrativos solo @inacap.cl.
   const profe = cliente(srv.base);
   r = await profe('POST', '/api/registro', { ...ESTUDIANTE, tipo: 'docente', nombres: 'Rosa', rut: '7.654.321-6', email: 'rosa@inacapmail.cl' });
-  assert.ok(r.body.errores?.email, 'un docente debe usar @inacap.cl');
-  r = await profe('POST', '/api/registro', { ...ESTUDIANTE, tipo: 'docente', nombres: 'Rosa', rut: '7.654.321-6', email: 'rosa@inacap.cl' });
-  assert.equal(r.status, 201);
+  assert.equal(r.status, 201, 'un docente puede usar @inacapmail.cl');
   assert.equal(r.body.perfil.tipo, 'docente');
+
+  const otroProfe = cliente(srv.base);
+  r = await otroProfe('POST', '/api/registro', { ...ESTUDIANTE, tipo: 'docente', nombres: 'Marco', rut: '6.620.653-K', email: 'marco@inacap.cl' });
+  assert.equal(r.status, 201, 'un docente puede usar @inacap.cl');
+
+  const administrativo = cliente(srv.base);
+  r = await administrativo('POST', '/api/registro', { ...ESTUDIANTE, tipo: 'administrativo', nombres: 'Tomás', rut: '9.834.147-1', email: 'tomas@inacapmail.cl' });
+  assert.ok(r.body.errores?.email, 'un administrativo debe usar @inacap.cl');
 
   // Recuperar la entrada desde otro dispositivo con RUT + correo + sede.
   const otroDispositivo = cliente(srv.base);
@@ -158,7 +164,7 @@ test('flujo completo: admin configura → estudiante se inscribe con taller → 
   assert.deepEqual(r.body.map((e) => e.nombres), ['Beto'], 'busca por RUT exacto');
 
   r = await acr('GET', '/api/acreditacion/buscar?q=perez');
-  assert.equal(r.body.length, 4, "Ana, Beto, Carla y la docente Rosa");
+  assert.equal(r.body.length, 5, "Ana, Beto, Carla y los docentes Rosa y Marco");
 
   // Admin ve los datos completos, exporta y todo queda auditado.
   r = await admin('GET', '/api/admin/estudiantes?q=ana');
@@ -189,7 +195,7 @@ test('flujo completo: admin configura → estudiante se inscribe con taller → 
   r = await admin('POST', '/api/admin/estudiantes/eliminar-todos', { confirmacion: 'ELIMINAR TODO', clave: 'mala' });
   assert.equal(r.status, 401);
   r = await admin('POST', '/api/admin/estudiantes/eliminar-todos', { confirmacion: 'ELIMINAR TODO', clave: CLAVE_ADMIN });
-  assert.equal(r.body.eliminados, 4);
+  assert.equal(r.body.eliminados, 5);
   r = await ana('GET', '/api/yo');
   assert.equal(r.body, null, 'las sesiones de estudiantes eliminados dejan de funcionar');
 });

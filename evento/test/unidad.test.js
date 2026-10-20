@@ -28,7 +28,11 @@ test('validación del registro de estudiantes', () => {
   const docente = v.validarRegistro({ tipo: 'docente', nombres: 'Ana', apellidos: 'Soto', rut: '12.345.678-5', sede: 'Talca', email: 'ana.soto@inacap.cl', telefono: '912345678' });
   assert.deepEqual(docente.errores, {});
   assert.equal(docente.datos.tipo, 'docente');
-  assert.ok(v.validarRegistro({ ...docente.datos, rut: '12.345.678-5', email: 'ana@inacapmail.cl' }).errores.email, 'un docente usa @inacap.cl');
+  // Un docente puede usar tanto @inacap.cl como @inacapmail.cl.
+  assert.deepEqual(v.validarRegistro({ ...docente.datos, rut: '12.345.678-5', email: 'ana@inacapmail.cl' }).errores, {});
+  assert.ok(v.validarRegistro({ ...docente.datos, rut: '12.345.678-5', email: 'ana@gmail.com' }).errores.email, 'un docente no puede usar un correo externo');
+  // Un administrativo sigue restringido a @inacap.cl.
+  assert.ok(v.validarRegistro({ ...docente.datos, tipo: 'administrativo', rut: '12.345.678-5', email: 'ana@inacapmail.cl' }).errores.email, 'un administrativo usa @inacap.cl');
   assert.equal(v.validarRegistro({ tipo: 'hacker' }).datos.tipo, 'estudiante');
   assert.equal(v.linea('  hola\u0000‮ mundo  ', 50), 'hola mundo');
 });
