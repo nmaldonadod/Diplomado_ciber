@@ -481,6 +481,8 @@ function vistaEntrada() {
           : el('span', { class: 'chip alerta' }, 'Pendiente de acreditación')))),
     el('p', { class: 'sub', style: { textAlign: 'center', fontSize: '.86rem', margin: '12px 0 0' } },
       'Muestra este QR en la acreditación. Te recomendamos guardar una captura de pantalla.'),
+    yo.acreditadoEn && el('div', { class: 'acciones', style: { justifyContent: 'center', margin: '12px 0 0' } },
+      el('a', { class: 'btn btn-primario btn-chico', href: '#/constancia' }, 'Descargar constancia de participación')),
 
     el('section', { class: 'card mis' },
       el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' } },
@@ -509,6 +511,47 @@ function vistaEntrada() {
             irA('#/');
           },
         }, 'Cerrar sesión'))));
+}
+
+// Solo se puede ver/descargar una vez que el acreditador marcó al estudiante como presente.
+function vistaConstancia() {
+  if (!estado.yo || !estado.yo.acreditadoEn) {
+    irA('#/entrada');
+    return;
+  }
+  const yo = estado.yo;
+  const e = ev();
+  const mios = misTalleres().sort((a, b) => a.inicio.localeCompare(b.inicio));
+  const unDia = e.fechaInicio === e.fechaFin;
+  // nombreDia() devuelve el día con mayúscula inicial (para títulos); en esta frase va en minúscula.
+  const minuscula = (s) => s.charAt(0).toLowerCase() + s.slice(1);
+  const fechaEvento = unDia
+    ? minuscula(nombreDia(e.fechaInicio))
+    : `del ${minuscula(nombreDia(e.fechaInicio, { day: 'numeric', month: 'long' }))} al ${minuscula(nombreDia(e.fechaFin, { day: 'numeric', month: 'long', year: 'numeric' }))}`;
+  const fAcred = new Date(yo.acreditadoEn);
+  const hoy = new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' });
+  return el('div', { style: { maxWidth: '640px', margin: '0 auto' } },
+    el('div', { class: 'acciones no-imprimir', style: { justifyContent: 'space-between', margin: '0 0 14px' } },
+      el('a', { class: 'btn btn-contorno btn-chico', href: '#/entrada' }, '← Volver a mi entrada'),
+      el('button', { class: 'btn btn-primario btn-chico', type: 'button', onclick: () => window.print() }, 'Imprimir / Guardar como PDF')),
+    el('article', { class: 'constancia' },
+      el('div', { class: 'enc' },
+        el('img', { src: '/img/logo-inacap-60.png', alt: 'INACAP 60 años', width: 150, height: 25 }),
+        el('h1', null, 'Constancia de participación')),
+      el('p', { class: 'cuerpo' },
+        'Se deja constancia de que ', el('strong', null, nombreCompleto(yo)),
+        yo.rut ? `, RUT ${yo.rut},` : ',',
+        ' participó en el evento «', el('strong', null, e.nombre), '»',
+        e.lugar ? `, realizado en ${e.lugar},` : ',',
+        ` ${unDia ? 'el ' : ''}${fechaEvento}.`),
+      mios.length ? el('div', { class: 'talleres-constancia' },
+        el('p', null, 'Talleres en los que participó:'),
+        el('ul', null, mios.map((t) => el('li', null, t.titulo)))) : null,
+      el('dl', { class: 'detalle' },
+        el('dt', null, 'Código de entrada'), el('dd', null, yo.codigo),
+        el('dt', null, 'Acreditación registrada'),
+        el('dd', null, `${fAcred.toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' })} · ${horaReal(yo.acreditadoEn)}`)),
+      el('p', { class: 'pie-doc' }, `Documento generado automáticamente por la plataforma del evento el ${hoy}.`)));
 }
 
 async function cambiarInscripcion(t, boton) {
@@ -712,6 +755,7 @@ const RUTAS = {
   bienvenida: ['entrada', vistaBienvenida],
   acceso: ['entrada', vistaAcceso],
   entrada: ['entrada', vistaEntrada],
+  constancia: ['entrada', vistaConstancia],
   talleres: ['talleres', vistaTalleres],
   agenda: ['agenda', vistaAgenda],
 };
