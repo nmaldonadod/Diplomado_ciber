@@ -513,6 +513,9 @@ function vistaEntrada() {
         }, 'Cerrar sesión'))));
 }
 
+// Área académica que organiza el evento: no viene del backend, es propia de esta constancia.
+const AREA_ACADEMICA = 'Área Informática, Ciberseguridad y Telecomunicaciones';
+
 // Solo se puede ver/descargar una vez que el acreditador marcó al estudiante como presente.
 function vistaConstancia() {
   if (!estado.yo || !estado.yo.acreditadoEn) {
@@ -528,30 +531,30 @@ function vistaConstancia() {
   const fechaEvento = unDia
     ? minuscula(nombreDia(e.fechaInicio))
     : `del ${minuscula(nombreDia(e.fechaInicio, { day: 'numeric', month: 'long' }))} al ${minuscula(nombreDia(e.fechaFin, { day: 'numeric', month: 'long', year: 'numeric' }))}`;
-  const fAcred = new Date(yo.acreditadoEn);
   const hoy = new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' });
   return el('div', { style: { maxWidth: '640px', margin: '0 auto' } },
     el('div', { class: 'acciones no-imprimir', style: { justifyContent: 'space-between', margin: '0 0 14px' } },
       el('a', { class: 'btn btn-contorno btn-chico', href: '#/entrada' }, '← Volver a mi entrada'),
       el('button', { class: 'btn btn-primario btn-chico', type: 'button', onclick: () => window.print() }, 'Imprimir / Guardar como PDF')),
     el('article', { class: 'constancia' },
+      el('span', { class: 'esquina ei', 'aria-hidden': 'true' }),
+      el('span', { class: 'esquina ad', 'aria-hidden': 'true' }),
       el('div', { class: 'enc' },
-        el('img', { src: '/img/logo-inacap-60.png', alt: 'INACAP 60 años', width: 150, height: 25 }),
+        el('img', { src: '/img/logo-inacap-claro.png', alt: 'INACAP 60 años · Aprender haciendo a lo largo de la vida', width: 230, height: 55 }),
+        el('span', { class: 'eyebrow-mes' }, '// Mes de la Ciberseguridad'),
+        el('span', { class: 'area' }, AREA_ACADEMICA),
         el('h1', null, 'Constancia de participación')),
       el('p', { class: 'cuerpo' },
         'Se deja constancia de que ', el('strong', null, nombreCompleto(yo)),
         yo.rut ? `, RUT ${yo.rut},` : ',',
-        ' participó en el evento «', el('strong', null, e.nombre), '»',
+        ' participó en «', el('strong', null, e.nombre), '»',
         e.lugar ? `, realizado en ${e.lugar},` : ',',
         ` ${unDia ? 'el ' : ''}${fechaEvento}.`),
       mios.length ? el('div', { class: 'talleres-constancia' },
-        el('p', null, 'Talleres en los que participó:'),
+        el('p', null, mios.length === 1 ? 'Taller en el que participó:' : 'Talleres en los que participó:'),
         el('ul', null, mios.map((t) => el('li', null, t.titulo)))) : null,
-      el('dl', { class: 'detalle' },
-        el('dt', null, 'Código de entrada'), el('dd', null, yo.codigo),
-        el('dt', null, 'Acreditación registrada'),
-        el('dd', null, `${fAcred.toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' })} · ${horaReal(yo.acreditadoEn)}`)),
-      el('p', { class: 'pie-doc' }, `Documento generado automáticamente por la plataforma del evento el ${hoy}.`)));
+      el('p', { class: 'disclaimer' },
+        'Esta constancia no representa una certificación emitida por INACAP. Documento generado automáticamente por la plataforma del evento el ', hoy, '.')));
 }
 
 async function cambiarInscripcion(t, boton) {

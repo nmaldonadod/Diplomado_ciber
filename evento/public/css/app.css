@@ -435,26 +435,33 @@ legend { font-family: var(--f-ui); font-weight: 700; margin-bottom: 4px }
   .selector-tipo span { font-size: .8rem; padding: 10px 2px; letter-spacing: 0; overflow-wrap: normal }
 }
 
-/* Constancia de participación: pensada para imprimirse/guardarse como PDF, por eso en claro. */
-.constancia { background: #fff; color: #10172a; border-radius: 18px; padding: 36px 34px; box-shadow: var(--brillo) }
-.constancia .enc { text-align: center; margin-bottom: 22px }
-.constancia .enc img { height: 24px; width: auto; margin-bottom: 14px; filter: none }
+/* Constancia de participación: pensada para imprimirse/guardarse como PDF, por eso en claro.
+   Estética «tech»: barras degradé cian/azul y esquinas tipo HUD, pero con suficiente contraste
+   en negro sobre blanco para que se lea bien impresa o en blanco y negro. */
+.constancia { position: relative; background: #fff; color: #10172a; border-radius: 6px; padding: 46px 42px 32px; box-shadow: var(--brillo); overflow: hidden }
+.constancia::before, .constancia::after { content: ""; position: absolute; left: 0; right: 0; height: 5px; background: linear-gradient(90deg, var(--electrico), var(--cian)) }
+.constancia::before { top: 0 }
+.constancia::after { bottom: 0; background: linear-gradient(90deg, var(--cian), var(--electrico)) }
+.constancia .esquina { position: absolute; width: 22px; height: 22px; border: 2px solid var(--cian); opacity: .6 }
+.constancia .esquina.ei { top: 16px; left: 16px; border-right: 0; border-bottom: 0 }
+.constancia .esquina.ad { bottom: 16px; right: 16px; border-left: 0; border-top: 0 }
+.constancia .enc { text-align: center; margin-bottom: 24px }
+.constancia .enc img { height: 44px; width: auto; margin-bottom: 18px; filter: none }
+.constancia .eyebrow-mes { display: block; font-family: var(--f-mono); font-size: .78rem; letter-spacing: .06em; color: var(--electrico); margin-bottom: 12px }
+.constancia .area { display: inline-block; font-family: var(--f-ui); font-weight: 700; font-size: .76rem; letter-spacing: .06em; text-transform: uppercase; color: var(--electrico); border: 1.5px solid var(--electrico); border-radius: 999px; padding: 7px 18px; margin-bottom: 18px }
 .constancia .enc h1 { margin: 0; font-family: var(--f-display); font-weight: 400; font-size: 1.3rem; text-transform: uppercase; letter-spacing: .03em; color: #0a2a9e }
 .constancia .cuerpo { font-family: var(--f-texto); font-size: 1.05rem; line-height: 1.7; text-align: center; max-width: 520px; margin: 0 auto 22px }
-.constancia .talleres-constancia { margin: 0 auto 22px; max-width: 480px }
-.constancia .talleres-constancia p { font-weight: 700; margin: 0 0 6px }
+.constancia .talleres-constancia { margin: 0 auto 26px; max-width: 480px; text-align: left; background: #f3f6fc; border-radius: 10px; padding: 16px 20px; border-left: 3px solid var(--cian) }
+.constancia .talleres-constancia p { font-weight: 700; margin: 0 0 6px; font-size: .92rem }
 .constancia .talleres-constancia ul { margin: 0; padding-left: 20px }
-.constancia .detalle { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; max-width: 420px; margin: 0 auto 22px; padding-top: 18px; border-top: 1.5px dashed #c7cedf; font-size: .92rem }
-.constancia .detalle dt { color: #5a6587 }
-.constancia .detalle dd { margin: 0; font-weight: 600 }
-.constancia .pie-doc { text-align: center; font-size: .8rem; color: #5a6587; margin: 0 }
+.constancia .disclaimer { text-align: center; font-size: .76rem; font-style: italic; color: #5a6587; margin: 8px 0 0; padding-top: 18px; border-top: 1.5px dashed #c7cedf }
 
 @media print {
   body { background: #fff }
   body::before { display: none }
   .cab, .pie, .inferior, #toast, .no-imprimir { display: none !important }
   main.wrap { max-width: none; padding: 0; margin: 0 }
-  .constancia { box-shadow: none; border-radius: 0; padding: 0 }
-  @page { margin: 18mm }
+  .constancia { box-shadow: none; border-radius: 0; padding: 40px 36px 26px }
+  @page { margin: 14mm }
 }
 @media (max-width: 380px) { .selector-tipo span { font-size: .72rem } }
