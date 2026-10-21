@@ -428,6 +428,27 @@ export class EventoDO {
       return json(200, { perfil: this.perfil(await this.hidratar(fila)), cupos: db().talleres.cupos() });
     });
 
+    // ----- encuesta post-evento -----
+    R('GET', '/api/encuesta', async (c) => {
+      const fila = await this.estudianteDe(c);
+      if (!fila) throw fallo('SIN_SESION', 'Debes iniciar sesión.', 401);
+      return json(200, { yaRespondio: Boolean(db().encuestas.de(fila.id)) });
+    });
+
+    R('POST', '/api/encuesta', async (c) => {
+      const fila = await this.estudianteDe(c);
+      if (!fila) throw fallo('SIN_SESION', 'Debes iniciar sesión.', 401);
+      if (!fila.acreditado_en) throw fallo('SIN_ACREDITAR', 'Debes estar acreditado para responder la encuesta.', 403);
+      this.limitar('encuesta:' + fila.id, 5, 60_000);
+      const b = await leerJSON(c.req);
+      const misTalleres = db().inscripciones.de(fila.id).map((t) => t.id);
+      const { errores, datos } = v.validarEncuesta(b, misTalleres);
+      if (v.hayErrores(errores)) throw errValidacion(errores);
+      db().encuestas.crear(fila.id, datos);
+      this.audit(c, `estudiante:${fila.id}`, 'encuesta_respondida', null);
+      return json(201, { ok: true });
+    });
+
     // ----- cuentas de staff -----
     R('GET', '/api/staff/yo', async (c) => json(200, { usuario: await this.usuarioDe(c), requiereConfiguracion: !db().usuarios.hayAdmin() }));
 
@@ -742,6 +763,9 @@ export class EventoDO {
       this.emitirCupos();
       return json(200, { eliminados: n });
     }, ADMIN);
+
+    // ----- administración: encuesta -----
+    R('GET', '/api/admin/encuesta', () => json(200, db().encuestas.resumen()), ADMIN);
 
     // ----- administración: usuarios -----
     R('GET', '/api/admin/usuarios', () => json(200, db().usuarios.listar()), ADMIN);

@@ -123,6 +123,23 @@ const ESQUEMA = `
     fin TEXT NOT NULL
   );
 
+  -- Encuesta post-evento: una respuesta por estudiante (ligada, no anónima), sin dato cifrado
+  -- porque no es del mismo nivel de sensibilidad que RUT/correo/teléfono.
+  CREATE TABLE IF NOT EXISTS encuestas (
+    id INTEGER PRIMARY KEY,
+    estudiante_id INTEGER NOT NULL UNIQUE REFERENCES estudiantes(id) ON DELETE CASCADE,
+    calificacion_charlas INTEGER NOT NULL CHECK (calificacion_charlas BETWEEN 1 AND 5),
+    calificacion_evento INTEGER NOT NULL CHECK (calificacion_evento BETWEEN 1 AND 5),
+    comentario TEXT NOT NULL DEFAULT '',
+    creado_en TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS encuestas_talleres (
+    encuesta_id INTEGER NOT NULL REFERENCES encuestas(id) ON DELETE CASCADE,
+    taller_id INTEGER NOT NULL REFERENCES talleres(id) ON DELETE CASCADE,
+    calificacion INTEGER NOT NULL CHECK (calificacion BETWEEN 1 AND 5),
+    PRIMARY KEY (encuesta_id, taller_id)
+  );
+
   CREATE TABLE IF NOT EXISTS auditoria (
     id INTEGER PRIMARY KEY,
     en TEXT NOT NULL,
@@ -421,6 +438,37 @@ export function crearDB(storage) {
     eliminar: (id) => p('DELETE FROM agenda WHERE id = ?').run(id).changes > 0,
   };
 
+  // ---------- encuesta post-evento ----------
+  const encuestas = {
+    de: (estudianteId) => p('SELECT * FROM encuestas WHERE estudiante_id = ?').get(estudianteId),
+    crear(estudianteId, d) {
+      return tx(() => {
+        if (encuestas.de(estudianteId)) throw new ErrorNegocio('YA_RESPONDIDA', 'Ya respondiste esta encuesta.', 409);
+        const r = p(`INSERT INTO encuestas (estudiante_id, calificacion_charlas, calificacion_evento, comentario, creado_en)
+                     VALUES (?, ?, ?, ?, ?)`)
+          .run(estudianteId, d.calificacionCharlas, d.calificacionEvento, d.comentario, ahora());
+        const encuestaId = Number(r.lastInsertRowid);
+        for (const t of d.talleres) {
+          p('INSERT INTO encuestas_talleres (encuesta_id, taller_id, calificacion) VALUES (?, ?, ?)').run(encuestaId, t.id, t.calificacion);
+        }
+        return encuestaId;
+      });
+    },
+    resumen: () => ({
+      general: p(`SELECT COUNT(*) AS respuestas, AVG(calificacion_charlas) AS promedioCharlas, AVG(calificacion_evento) AS promedioEvento
+                  FROM encuestas`).get(),
+      porSede: p(`SELECT est.sede, COUNT(*) AS respuestas, AVG(enc.calificacion_charlas) AS promedioCharlas, AVG(enc.calificacion_evento) AS promedioEvento
+                  FROM encuestas enc JOIN estudiantes est ON est.id = enc.estudiante_id
+                  GROUP BY est.sede ORDER BY 2 DESC`).all(),
+      porTaller: p(`SELECT t.id, t.titulo, COUNT(*) AS respuestas, AVG(et.calificacion) AS promedio
+                    FROM encuestas_talleres et JOIN talleres t ON t.id = et.taller_id
+                    GROUP BY t.id ORDER BY 3 DESC`).all(),
+      comentarios: p(`SELECT est.nombres, est.apellidos, est.sede, enc.comentario, enc.creado_en FROM encuestas enc
+                      JOIN estudiantes est ON est.id = enc.estudiante_id
+                      WHERE enc.comentario != '' ORDER BY enc.creado_en DESC LIMIT 200`).all(),
+    }),
+  };
+
   // ---------- auditoría ----------
   const auditoria = {
     registrar: (actor, accion, detalle, ip) => p('INSERT INTO auditoria (en, actor, accion, detalle, ip) VALUES (?, ?, ?, ?, ?)')
@@ -439,8 +487,7 @@ export function crearDB(storage) {
   });
 
   return {
-    db, tx, evento, estudiantes, sesiones, usuarios, talleres, inscripciones, agenda, auditoria, estadisticas,
-
+    db, tx, evento, estudiantes, sesiones, usuarios, talleres, inscripciones, agenda, encuestas, auditoria, estadisticas,
   };
 }
 

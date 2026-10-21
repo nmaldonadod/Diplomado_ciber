@@ -10,8 +10,12 @@ const estado = {
   soloMia: false,
   cambiados: new Set(),
   bienvenida: null, // resultado de la inscripción recién hecha
+  encuesta: undefined, // respuesta de /api/encuesta (undefined = sin pedir aún, null = pidiendo)
+  encuestaEnviada: false,
 };
 const vista = document.getElementById('vista');
+// Si una vista protegida (p. ej. la encuesta) manda a #/acceso por falta de sesión, acá recuerda a dónde volver.
+let destinoTrasAcceso = null;
 
 // ---------- nodos que se redibujan cuando cambian los cupos ----------
 let refrescables = new Set();
@@ -440,7 +444,8 @@ function vistaAcceso() {
     try {
       estado.yo = await api('POST', '/api/recuperar', { rut: f.rut.value, email: f.email.value.trim(), sede: f.sede.value });
       toast('¡Listo! Recuperaste tu entrada.');
-      irA('#/entrada');
+      irA(destinoTrasAcceso || '#/entrada');
+      destinoTrasAcceso = null;
     } catch (e) {
       aviso.textContent = e.message;
       aviso.classList.remove('oculto');
@@ -562,6 +567,104 @@ function vistaConstancia() {
         el('ul', null, mios.map((t) => el('li', null, t.titulo)))) : null,
       el('p', { class: 'disclaimer' },
         'Esta constancia no representa una certificación emitida por INACAP. Documento generado automáticamente por la plataforma del evento el ', hoy, '.')));
+}
+
+// ---------- encuesta post-evento ----------
+
+// Selector de 1 a 5 estrellas. El valor actual se lee con nodo.__valor().
+function estrellas(etiquetaAria) {
+  let valor = 0;
+  const botones = [1, 2, 3, 4, 5].map((n) => el('button', {
+    type: 'button', class: 'estrella', 'aria-label': `${n} de 5`,
+    onclick: () => { valor = n; refrescar(); },
+  }, '★'));
+  const cont = el('div', { class: 'estrellas', role: 'radiogroup', 'aria-label': etiquetaAria }, botones);
+  function refrescar() {
+    botones.forEach((b, i) => b.classList.toggle('activa', i < valor));
+  }
+  cont.__valor = () => valor;
+  return cont;
+}
+
+function vistaEncuesta() {
+  // Sin sesión (p. ej. alguien abre el link de la encuesta en otro dispositivo): primero recupera su
+  // entrada y, apenas lo logre, vuelve aquí mismo en vez de caer en «Mi entrada».
+  if (!estado.yo) {
+    destinoTrasAcceso = '#/encuesta';
+    irA('#/acceso');
+    return;
+  }
+  const yo = estado.yo;
+  if (!yo.acreditadoEn) {
+    return el('section', { class: 'card', style: { maxWidth: '520px', margin: '0 auto' } },
+      el('span', { class: 'eyebrow' }, 'Encuesta'),
+      el('h1', null, 'Todavía no puedes responder'),
+      el('p', { class: 'sub' }, 'Vas a poder contarnos qué te pareció apenas te acrediten en el evento.'));
+  }
+  if (estado.encuesta === undefined) {
+    estado.encuesta = null; // evita pedirlo de nuevo mientras llega la respuesta
+    api('GET', '/api/encuesta').then((r) => {
+      estado.encuesta = r;
+      if (location.hash === '#/encuesta') render();
+    }).catch(() => { estado.encuesta = undefined; });
+  }
+  if (estado.encuesta === null) return el('p', { class: 'vacio' }, 'Cargando…');
+  if (estado.encuestaEnviada || estado.encuesta.yaRespondio) {
+    return el('section', { class: 'card', style: { maxWidth: '520px', margin: '0 auto' } },
+      el('span', { class: 'eyebrow' }, 'Encuesta'),
+      el('h1', null, '¡Gracias por tu respuesta!'),
+      el('p', { class: 'sub' }, 'Ya registramos tu opinión sobre el evento.'));
+  }
+
+  const mios = misTalleres().sort((a, b) => a.inicio.localeCompare(b.inicio));
+  const aviso = el('div', { class: 'aviso error oculto', role: 'alert' });
+  const eCharlas = estrellas('Charlas y actividades generales');
+  const eTalleres = mios.map((t) => ({ taller: t, nodo: estrellas(`Taller: ${t.titulo}`) }));
+  const eEvento = estrellas('Evaluación general del evento');
+  const comentario = el('textarea', { id: 'f-comentario', name: 'comentario', rows: 3, maxlength: 500, placeholder: 'Opcional' });
+
+  const form = el('form', { class: 'card', novalidate: true, style: { maxWidth: '560px', margin: '0 auto' } },
+    el('span', { class: 'eyebrow' }, 'Encuesta'),
+    el('h1', null, 'Cuéntanos qué te pareció'),
+    el('p', { class: 'sub' }, 'Toma menos de un minuto. Tus respuestas nos ayudan a mejorar el próximo evento.'),
+    aviso,
+    el('div', { class: 'campo' },
+      el('span', { class: 'etiqueta' }, '¿Cómo calificarías las charlas y actividades generales del evento?'),
+      eCharlas),
+    mios.length ? el('div', { class: 'campo' },
+      el('span', { class: 'etiqueta' }, mios.length === 1 ? 'Tu taller' : 'Tus talleres'),
+      eTalleres.map(({ taller, nodo }) => el('div', { class: 'campo-taller' },
+        el('p', { class: 'sub', style: { fontSize: '.88rem', margin: '0 0 4px' } }, taller.titulo), nodo))) : null,
+    el('div', { class: 'campo' },
+      el('span', { class: 'etiqueta' }, '¿Cómo calificarías el evento?'),
+      eEvento),
+    el('div', { class: 'campo' },
+      el('label', { for: 'f-comentario' }, '¿Algo que quieras agregar o sugerir?'),
+      comentario),
+    el('button', { class: 'btn btn-primario btn-bloque', type: 'submit' }, 'Enviar respuesta'));
+
+  form.addEventListener('submit', async (evt) => {
+    evt.preventDefault();
+    aviso.classList.add('oculto');
+    const boton = form.querySelector('button[type=submit]');
+    boton.disabled = true;
+    try {
+      await api('POST', '/api/encuesta', {
+        calificacionCharlas: eCharlas.__valor(),
+        calificacionEvento: eEvento.__valor(),
+        comentario: comentario.value.trim(),
+        talleres: eTalleres.map(({ taller, nodo }) => ({ id: taller.id, calificacion: nodo.__valor() })),
+      });
+      estado.encuestaEnviada = true;
+      toast('¡Gracias por tu respuesta!');
+      irA('#/encuesta');
+    } catch (e) {
+      aviso.textContent = e.message;
+      aviso.classList.remove('oculto');
+      boton.disabled = false;
+    }
+  });
+  return form;
 }
 
 async function cambiarInscripcion(t, boton) {
@@ -766,6 +869,7 @@ const RUTAS = {
   acceso: ['entrada', vistaAcceso],
   entrada: ['entrada', vistaEntrada],
   constancia: ['entrada', vistaConstancia],
+  encuesta: ['encuesta', vistaEncuesta],
   talleres: ['talleres', vistaTalleres],
   agenda: ['agenda', vistaAgenda],
 };

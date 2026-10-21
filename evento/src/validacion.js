@@ -134,6 +134,33 @@ function validarEvento(b) {
   return { errores, datos: d };
 }
 
+function calificacionValida(v) {
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 1 && n <= 5 ? n : null;
+}
+
+// `misTalleres`: ids de los talleres en los que el estudiante está inscrito (se exige calificarlos todos, ni más ni menos).
+function validarEncuesta(b, misTalleres) {
+  const errores = {};
+  const calificacionCharlas = calificacionValida(b.calificacionCharlas);
+  if (!calificacionCharlas) errores.calificacionCharlas = 'Calificación inválida.';
+  const calificacionEvento = calificacionValida(b.calificacionEvento);
+  if (!calificacionEvento) errores.calificacionEvento = 'Calificación inválida.';
+  const comentario = parrafo(b.comentario, 500);
+  const recibidos = new Map(
+    (Array.isArray(b.talleres) ? b.talleres : [])
+      .filter((t) => misTalleres.includes(Number(t?.id)))
+      .map((t) => [Number(t.id), calificacionValida(t.calificacion)]),
+  );
+  const talleres = [];
+  for (const tid of misTalleres) {
+    const cal = recibidos.get(tid);
+    if (!cal) { errores.talleres = 'Califica todos tus talleres.'; break; }
+    talleres.push({ id: tid, calificacion: cal });
+  }
+  return { errores, datos: { calificacionCharlas, calificacionEvento, comentario, talleres } };
+}
+
 // Política de contraseñas para cuentas de administración y acreditación.
 function validarClave(clave) {
   if (typeof clave !== 'string' || clave.length < 12) return 'La contraseña debe tener al menos 12 caracteres.';
@@ -163,5 +190,5 @@ const hayErrores = (e) => Object.keys(e).length > 0;
 export {
   SEDES, DOMINIO_CORREO, TIPOS_PARTICIPANTE, DOMINIOS_PERMITIDOS, NIVELES, TIPOS_AGENDA, ROLES,
   linea, parrafo, fechaHoraValida, correoInstitucional, telefonoChile,
-  validarRegistro, validarTaller, validarAgenda, validarEvento, validarClave, validarUsuario, hayErrores,
+  validarRegistro, validarTaller, validarAgenda, validarEvento, validarEncuesta, validarClave, validarUsuario, hayErrores,
 };

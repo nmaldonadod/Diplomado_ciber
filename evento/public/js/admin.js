@@ -7,7 +7,7 @@ const adm = { usuario: null, sedes: [], pestana: 'resumen', timer: null };
 
 const PESTANAS = [
   ['resumen', 'Resumen'], ['evento', 'Evento'], ['talleres', 'Talleres'], ['agenda', 'Agenda'],
-  ['estudiantes', 'Estudiantes'], ['usuarios', 'Usuarios'], ['auditoria', 'Auditoría'], ['cuenta', 'Mi cuenta'],
+  ['estudiantes', 'Estudiantes'], ['usuarios', 'Usuarios'], ['encuesta', 'Encuesta'], ['auditoria', 'Auditoría'], ['cuenta', 'Mi cuenta'],
 ];
 
 const ETIQUETA_TIPO = { estudiante: 'Estudiante', docente: 'Docente', administrativo: 'Administrativo' };
@@ -582,6 +582,42 @@ async function vistaUsuarios() {
 }
 
 // =====================================================================
+// Encuesta
+// =====================================================================
+
+async function vistaEncuesta() {
+  const r = await llamar('GET', '/api/admin/encuesta');
+  const prom = (n) => (n == null ? '—' : n.toFixed(1));
+  return [
+    el('div', { class: 'barra-acciones' }, el('h1', null, 'Resultados de la encuesta')),
+    el('div', { class: 'kpis' },
+      el('div', { class: 'kpi' }, el('div', { class: 'n' }, r.general.respuestas), el('div', { class: 'l' }, 'Respuestas')),
+      el('div', { class: 'kpi' }, el('div', { class: 'n' }, prom(r.general.promedioCharlas)), el('div', { class: 'l' }, 'Charlas (1-5)')),
+      el('div', { class: 'kpi' }, el('div', { class: 'n' }, prom(r.general.promedioEvento)), el('div', { class: 'l' }, 'Evento (1-5)'))),
+    el('div', { class: 'grid grid-2' },
+      el('section', { class: 'card' }, el('h2', null, 'Por sede'),
+        r.porSede.length
+          ? el('table', { class: 'tabla' },
+            el('thead', null, el('tr', null, el('th', null, 'Sede'), el('th', null, 'Respuestas'), el('th', null, 'Charlas'), el('th', null, 'Evento'))),
+            el('tbody', null, r.porSede.map((s) => el('tr', null,
+              el('td', null, s.sede), el('td', null, s.respuestas), el('td', null, prom(s.promedioCharlas)), el('td', null, prom(s.promedioEvento))))))
+          : el('p', { class: 'sub' }, 'Aún no hay respuestas.')),
+      el('section', { class: 'card' }, el('h2', null, 'Por taller'),
+        r.porTaller.length
+          ? el('table', { class: 'tabla' },
+            el('thead', null, el('tr', null, el('th', null, 'Taller'), el('th', null, 'Respuestas'), el('th', null, 'Promedio'))),
+            el('tbody', null, r.porTaller.map((t) => el('tr', null,
+              el('td', null, t.titulo), el('td', null, t.respuestas), el('td', null, prom(t.promedio))))))
+          : el('p', { class: 'sub' }, 'Aún no hay respuestas.'))),
+    el('section', { class: 'card', style: { marginTop: '16px' } }, el('h2', null, 'Comentarios'),
+      r.comentarios.length
+        ? r.comentarios.map((c) => el('div', { class: 'fila' },
+          el('div', { class: 'q' }, el('p', null, c.comentario), el('span', null, `${c.nombres} ${c.apellidos} · ${c.sede}`))))
+        : el('p', { class: 'sub' }, 'Nadie dejó comentarios todavía.')),
+  ];
+}
+
+// =====================================================================
 // Auditoría y cuenta
 // =====================================================================
 
@@ -617,7 +653,7 @@ async function cambiarPestana(id) {
   clearTimeout(adm.timer);
   const vistas = {
     resumen: vistaResumen, evento: vistaEvento, talleres: vistaTalleres, agenda: vistaAgenda,
-    estudiantes: vistaEstudiantes, usuarios: vistaUsuarios, auditoria: vistaAuditoria, cuenta: vistaCuenta,
+    estudiantes: vistaEstudiantes, usuarios: vistaUsuarios, encuesta: vistaEncuesta, auditoria: vistaAuditoria, cuenta: vistaCuenta,
   };
   try {
     const contenido = await vistas[id]();

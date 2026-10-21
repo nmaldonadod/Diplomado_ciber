@@ -37,6 +37,29 @@ test('validación del registro de estudiantes', () => {
   assert.equal(v.linea('  hola\u0000‮ mundo  ', 50), 'hola mundo');
 });
 
+test('validación de la encuesta post-evento', () => {
+  const ok = v.validarEncuesta({ calificacionCharlas: 5, calificacionEvento: '4', comentario: ' Muy bueno ', talleres: [{ id: 1, calificacion: 3 }, { id: 2, calificacion: '5' }] }, [1, 2]);
+  assert.deepEqual(ok.errores, {});
+  assert.deepEqual(ok.datos, { calificacionCharlas: 5, calificacionEvento: 4, comentario: 'Muy bueno', talleres: [{ id: 1, calificacion: 3 }, { id: 2, calificacion: 5 }] });
+
+  // calificaciones fuera de rango o no numéricas
+  const malo = v.validarEncuesta({ calificacionCharlas: 0, calificacionEvento: 6, talleres: [] }, []);
+  assert.ok(malo.errores.calificacionCharlas);
+  assert.ok(malo.errores.calificacionEvento);
+
+  // falta calificar uno de los talleres propios
+  const incompleta = v.validarEncuesta({ calificacionCharlas: 3, calificacionEvento: 3, talleres: [{ id: 1, calificacion: 4 }] }, [1, 2]);
+  assert.ok(incompleta.errores.talleres);
+
+  // un taller que no es suyo se ignora, no cuela una calificación ajena
+  const ajeno = v.validarEncuesta({ calificacionCharlas: 3, calificacionEvento: 3, talleres: [{ id: 99, calificacion: 5 }] }, []);
+  assert.deepEqual(ajeno.errores, {});
+  assert.deepEqual(ajeno.datos.talleres, []);
+
+  // comentario vacío es válido (es opcional)
+  assert.deepEqual(v.validarEncuesta({ calificacionCharlas: 3, calificacionEvento: 3, talleres: [] }, []).errores, {});
+});
+
 test('validación de talleres y contraseñas', () => {
   const t = v.validarTaller({ titulo: 'Taller', inicio: '2026-11-12T10:00', fin: '2026-11-12T09:00', cupos: 0 });
   assert.ok(t.errores.fin && t.errores.cupos);

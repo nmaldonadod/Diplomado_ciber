@@ -311,6 +311,74 @@ test('carga inicial del Mes de la Ciberseguridad e importación desde archivo', 
   assert.equal(actualizado.nivel, 'Avanzado');
 });
 
+test('encuesta post-evento: solo responde quien está acreditado, una sola vez, y el resumen del admin cuadra', async (t) => {
+  const srv = await levantar();
+  t.after(() => srv.cerrar());
+  const admin = await prepararAdmin(srv.base);
+
+  let r = await admin('POST', '/api/admin/talleres', { titulo: 'Criptografía aplicada', sala: 'Lab 2', inicio: '2026-11-12T10:00', fin: '2026-11-12T11:00', cupos: 10, publicado: true });
+  const tallerId = r.body.id;
+
+  const beto = cliente(srv.base);
+  r = await beto('POST', '/api/registro', { nombres: 'Beto', apellidos: 'Lara', rut: '11.111.111-1', sede: 'Talca', email: 'beto@inacapmail.cl', telefono: '9 1234 5678', consentimiento: true, talleres: [tallerId] });
+  assert.equal(r.status, 201);
+  const ticket = r.body.perfil.qr;
+
+  // Sin sesión, no hay encuesta que ver.
+  const anon = cliente(srv.base);
+  r = await anon('GET', '/api/encuesta');
+  assert.equal(r.status, 401);
+
+  // Inscrito pero sin acreditar: no puede responder todavía.
+  r = await beto('GET', '/api/encuesta');
+  assert.equal(r.body.yaRespondio, false);
+  r = await beto('POST', '/api/encuesta', { calificacionCharlas: 5, calificacionEvento: 5, talleres: [{ id: tallerId, calificacion: 5 }] });
+  assert.equal(r.body.error, 'SIN_ACREDITAR');
+
+  // El acreditador lo marca presente.
+  r = await admin('POST', '/api/admin/usuarios', { email: 'puerta1@inacap.cl', nombre: 'Puerta 1', rol: 'acreditador', clave: 'Acreditar-2026!' });
+  assert.equal(r.status, 201);
+  const acr = cliente(srv.base);
+  r = await acr('POST', '/api/staff/login', { email: 'puerta1@inacap.cl', clave: 'Acreditar-2026!' });
+  assert.equal(r.status, 200);
+  r = await acr('POST', '/api/acreditacion/acreditar', { texto: ticket });
+  assert.equal(r.body.resultado, 'ACREDITADO');
+
+  // Debe calificar todos sus talleres: si falta uno, error.
+  r = await beto('POST', '/api/encuesta', { calificacionCharlas: 4, calificacionEvento: 5, talleres: [] });
+  assert.ok(r.body.errores?.talleres);
+
+  // Respuesta completa: pasa.
+  r = await beto('POST', '/api/encuesta', {
+    calificacionCharlas: 4, calificacionEvento: 5, comentario: 'Muy buen evento, gracias por organizarlo.',
+    talleres: [{ id: tallerId, calificacion: 5 }],
+  });
+  assert.equal(r.status, 201);
+
+  r = await beto('GET', '/api/encuesta');
+  assert.equal(r.body.yaRespondio, true);
+
+  // No se puede responder dos veces.
+  r = await beto('POST', '/api/encuesta', { calificacionCharlas: 1, calificacionEvento: 1, talleres: [{ id: tallerId, calificacion: 1 }] });
+  assert.equal(r.body.error, 'YA_RESPONDIDA');
+
+  // El resumen del admin cuadra con lo que respondió Beto.
+  r = await admin('GET', '/api/admin/encuesta');
+  assert.equal(r.status, 200);
+  assert.equal(r.body.general.respuestas, 1);
+  assert.equal(r.body.general.promedioEvento, 5);
+  assert.equal(r.body.general.promedioCharlas, 4);
+  assert.deepEqual(r.body.porSede.map((s) => [s.sede, s.respuestas]), [['Talca', 1]]);
+  assert.equal(r.body.porTaller[0].titulo, 'Criptografía aplicada');
+  assert.equal(r.body.porTaller[0].promedio, 5);
+  assert.equal(r.body.comentarios[0].comentario, 'Muy buen evento, gracias por organizarlo.');
+  assert.equal(r.body.comentarios[0].nombres, 'Beto');
+
+  // La encuesta es solo para administradores, no para acreditadores.
+  r = await acr('GET', '/api/admin/encuesta');
+  assert.equal(r.status, 403);
+});
+
 test('servidor Node: la IP del cliente no se puede falsificar para evadir límites', { skip: process.env.RUNTIME !== 'node' }, async (t) => {
   const srv = await levantar();
   t.after(() => srv.cerrar());

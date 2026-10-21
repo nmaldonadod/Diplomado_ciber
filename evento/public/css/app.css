@@ -111,7 +111,7 @@ nav.tabs a[aria-current="page"] { color: var(--noche); background: var(--cian); 
 @media (max-width: 760px) {
   header.cab nav.tabs { display: none }
   nav.inferior {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(4, 1fr);
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(5, 1fr);
     background: rgba(3, 8, 36, .92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--linea);
     padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
   }
@@ -455,6 +455,14 @@ legend { font-family: var(--f-ui); font-weight: 700; margin-bottom: 4px }
 .constancia .talleres-constancia p { font-weight: 700; margin: 0 0 6px; font-size: .92rem }
 .constancia .talleres-constancia ul { margin: 0; padding-left: 20px }
 .constancia .disclaimer { text-align: center; font-size: .76rem; font-style: italic; color: #5a6587; margin: 8px 0 0; padding-top: 18px; border-top: 1.5px dashed #c7cedf }
+
+/* Encuesta: selector de 1 a 5 estrellas */
+.estrellas { display: flex; gap: 6px; margin-top: 6px }
+.estrella { background: none; border: none; padding: 2px; font-size: 1.9rem; line-height: 1; color: var(--texto-3); cursor: pointer; transition: .1s; min-height: 0 }
+.estrella:hover { color: var(--cian-suave) }
+.estrella.activa { color: var(--cian); text-shadow: var(--halo-cian) }
+.campo-taller { margin-bottom: 14px }
+.campo-taller:last-child { margin-bottom: 0 }
 
 @media print {
   body { background: #fff }
