@@ -38,7 +38,7 @@ test('flujo completo: admin configura → estudiante se inscribe con taller → 
 
   let r = await anon('GET', '/api/evento');
   assert.equal(r.body.configurado, false);
-  assert.deepEqual(r.body.sedes, ['Santiago Centro', 'Santiago Sur', 'Rancagua', 'Talca', 'Curicó', 'Apoquindo', 'Valparaíso']);
+  assert.deepEqual(r.body.sedes, ['Santiago Centro', 'Santiago Sur', 'La Granja', 'Rancagua', 'Talca', 'Curicó', 'Apoquindo', 'Valparaíso']);
 
   const admin = await prepararAdmin(srv.base);
   r = await admin('POST', '/api/admin/talleres', { titulo: 'Robótica', descripcion: 'Arduino', docente: 'Prof. Rojas', sala: 'Lab 1', inicio: '2026-11-12T10:00', fin: '2026-11-12T12:00', cupos: 1, publicado: true });

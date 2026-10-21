@@ -1,6 +1,6 @@
 import { normalizarRut } from './rut.js';
 
-const SEDES = ['Santiago Centro', 'Santiago Sur', 'Rancagua', 'Talca', 'Curicó', 'Apoquindo', 'Valparaíso'];
+const SEDES = ['Santiago Centro', 'Santiago Sur', 'La Granja', 'Rancagua', 'Talca', 'Curicó', 'Apoquindo', 'Valparaíso'];
 const DOMINIO_CORREO = 'inacapmail.cl';
 // Tipo de participante y el dominio de correo institucional «de referencia» (para mostrar en la UI).
 const TIPOS_PARTICIPANTE = { estudiante: 'inacapmail.cl', docente: 'inacap.cl', administrativo: 'inacap.cl' };
