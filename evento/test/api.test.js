@@ -323,6 +323,7 @@ test('encuesta post-evento: solo responde quien está acreditado, una sola vez, 
   r = await beto('POST', '/api/registro', { nombres: 'Beto', apellidos: 'Lara', rut: '11.111.111-1', sede: 'Talca', email: 'beto@inacapmail.cl', telefono: '9 1234 5678', consentimiento: true, talleres: [tallerId] });
   assert.equal(r.status, 201);
   const ticket = r.body.perfil.qr;
+  const RESPUESTA = { calificacionLogistica: 5, calificacionCharlas: 4, calificacionDifusion: 3, nps: 10, calificacionEvento: 5 };
 
   // Sin sesión, no hay encuesta que ver.
   const anon = cliente(srv.base);
@@ -332,7 +333,7 @@ test('encuesta post-evento: solo responde quien está acreditado, una sola vez, 
   // Inscrito pero sin acreditar: no puede responder todavía.
   r = await beto('GET', '/api/encuesta');
   assert.equal(r.body.yaRespondio, false);
-  r = await beto('POST', '/api/encuesta', { calificacionCharlas: 5, calificacionEvento: 5, talleres: [{ id: tallerId, calificacion: 5 }] });
+  r = await beto('POST', '/api/encuesta', { ...RESPUESTA, talleres: [{ id: tallerId, calificacion: 5 }] });
   assert.equal(r.body.error, 'SIN_ACREDITAR');
 
   // El acreditador lo marca presente.
@@ -343,14 +344,19 @@ test('encuesta post-evento: solo responde quien está acreditado, una sola vez, 
   assert.equal(r.status, 200);
   r = await acr('POST', '/api/acreditacion/acreditar', { texto: ticket });
   assert.equal(r.body.resultado, 'ACREDITADO');
+  const betoId = r.body.estudiante.id;
 
   // Debe calificar todos sus talleres: si falta uno, error.
-  r = await beto('POST', '/api/encuesta', { calificacionCharlas: 4, calificacionEvento: 5, talleres: [] });
+  r = await beto('POST', '/api/encuesta', { ...RESPUESTA, talleres: [] });
   assert.ok(r.body.errores?.talleres);
+
+  // Falta una calificación o el NPS está fuera de rango: error.
+  r = await beto('POST', '/api/encuesta', { ...RESPUESTA, nps: 11, talleres: [{ id: tallerId, calificacion: 5 }] });
+  assert.ok(r.body.errores?.nps);
 
   // Respuesta completa: pasa.
   r = await beto('POST', '/api/encuesta', {
-    calificacionCharlas: 4, calificacionEvento: 5, comentario: 'Muy buen evento, gracias por organizarlo.',
+    ...RESPUESTA, comentario: 'Muy buen evento, gracias por organizarlo.',
     talleres: [{ id: tallerId, calificacion: 5 }],
   });
   assert.equal(r.status, 201);
@@ -359,15 +365,18 @@ test('encuesta post-evento: solo responde quien está acreditado, una sola vez, 
   assert.equal(r.body.yaRespondio, true);
 
   // No se puede responder dos veces.
-  r = await beto('POST', '/api/encuesta', { calificacionCharlas: 1, calificacionEvento: 1, talleres: [{ id: tallerId, calificacion: 1 }] });
+  r = await beto('POST', '/api/encuesta', { ...RESPUESTA, nps: 1, talleres: [{ id: tallerId, calificacion: 1 }] });
   assert.equal(r.body.error, 'YA_RESPONDIDA');
 
-  // El resumen del admin cuadra con lo que respondió Beto.
+  // El resumen del admin cuadra con lo que respondió Beto, incluido el NPS calculado.
   r = await admin('GET', '/api/admin/encuesta');
   assert.equal(r.status, 200);
   assert.equal(r.body.general.respuestas, 1);
-  assert.equal(r.body.general.promedioEvento, 5);
+  assert.equal(r.body.general.promedioLogistica, 5);
   assert.equal(r.body.general.promedioCharlas, 4);
+  assert.equal(r.body.general.promedioDifusion, 3);
+  assert.equal(r.body.general.nps, 100, 'un solo 10 (promotor) da NPS +100');
+  assert.equal(r.body.general.promedioEvento, 5);
   assert.deepEqual(r.body.porSede.map((s) => [s.sede, s.respuestas]), [['Talca', 1]]);
   assert.equal(r.body.porTaller[0].titulo, 'Criptografía aplicada');
   assert.equal(r.body.porTaller[0].promedio, 5);
@@ -377,6 +386,18 @@ test('encuesta post-evento: solo responde quien está acreditado, una sola vez, 
   // La encuesta es solo para administradores, no para acreditadores.
   r = await acr('GET', '/api/admin/encuesta');
   assert.equal(r.status, 403);
+
+  // El admin puede dejar que Beto vuelva a responder.
+  r = await admin('GET', '/api/admin/estudiantes?q=Beto');
+  assert.equal(r.body.filas[0].encuestaRespondida, true);
+  r = await acr('DELETE', `/api/admin/estudiantes/${betoId}/encuesta`);
+  assert.equal(r.status, 403, 'un acreditador no puede reabrir encuestas');
+  r = await admin('DELETE', `/api/admin/estudiantes/${betoId}/encuesta`);
+  assert.equal(r.status, 200);
+  r = await beto('GET', '/api/encuesta');
+  assert.equal(r.body.yaRespondio, false, 'puede responder de nuevo');
+  r = await admin('DELETE', `/api/admin/estudiantes/${betoId}/encuesta`);
+  assert.equal(r.status, 404, 'no hay nada que reabrir si no ha respondido');
 });
 
 test('servidor Node: la IP del cliente no se puede falsificar para evadir límites', { skip: process.env.RUNTIME !== 'node' }, async (t) => {

@@ -139,13 +139,25 @@ function calificacionValida(v) {
   return Number.isInteger(n) && n >= 1 && n <= 5 ? n : null;
 }
 
+// NPS: «¿qué tan probable es que recomiendes...?», escala estándar de 0 a 10.
+function npsValido(v) {
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 0 && n <= 10 ? n : null;
+}
+
 // `misTalleres`: ids de los talleres en los que el estudiante está inscrito (se exige calificarlos todos, ni más ni menos).
 function validarEncuesta(b, misTalleres) {
   const errores = {};
-  const calificacionCharlas = calificacionValida(b.calificacionCharlas);
-  if (!calificacionCharlas) errores.calificacionCharlas = 'Calificación inválida.';
-  const calificacionEvento = calificacionValida(b.calificacionEvento);
-  if (!calificacionEvento) errores.calificacionEvento = 'Calificación inválida.';
+  const campo = (nombre, validador) => {
+    const v = validador(b[nombre]);
+    if (v == null) errores[nombre] = 'Calificación inválida.';
+    return v;
+  };
+  const calificacionLogistica = campo('calificacionLogistica', calificacionValida);
+  const calificacionCharlas = campo('calificacionCharlas', calificacionValida);
+  const calificacionDifusion = campo('calificacionDifusion', calificacionValida);
+  const nps = campo('nps', npsValido);
+  const calificacionEvento = campo('calificacionEvento', calificacionValida);
   const comentario = parrafo(b.comentario, 500);
   const recibidos = new Map(
     (Array.isArray(b.talleres) ? b.talleres : [])
@@ -158,7 +170,7 @@ function validarEncuesta(b, misTalleres) {
     if (!cal) { errores.talleres = 'Califica todos tus talleres.'; break; }
     talleres.push({ id: tid, calificacion: cal });
   }
-  return { errores, datos: { calificacionCharlas, calificacionEvento, comentario, talleres } };
+  return { errores, datos: { calificacionLogistica, calificacionCharlas, calificacionDifusion, nps, calificacionEvento, comentario, talleres } };
 }
 
 // Política de contraseñas para cuentas de administración y acreditación.

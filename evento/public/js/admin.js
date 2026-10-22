@@ -464,6 +464,15 @@ async function vistaEstudiantes() {
             el('span', { style: { display: 'block' } }, e.talleres.length ? e.talleres.map((t) => t.titulo).join(', ') : 'Sin talleres')),
           el('div', { class: 'btns' },
             e.acreditadoEn ? el('span', { class: 'chip ok' }, '✓ Acreditado') : el('span', { class: 'chip' }, 'Pendiente'),
+            e.encuestaRespondida && el('button', {
+              class: 'btn btn-contorno btn-chico', type: 'button',
+              onclick: async () => {
+                if (!confirm(`¿Permitir que ${nombreDe(e)} vuelva a responder la encuesta? Se borra su respuesta anterior.`)) return;
+                await llamar('DELETE', `/api/admin/estudiantes/${e.id}/encuesta`);
+                toast('Puede volver a responder la encuesta');
+                cargar();
+              },
+            }, 'Permitir responder de nuevo'),
             el('button', { class: 'btn btn-secundario btn-chico', type: 'button', onclick: () => detalleEstudiante(e.id, cargar) }, 'Ver')))),
         el('div', { class: 'acciones' },
           desde > 0 && el('button', { class: 'btn btn-contorno btn-chico', type: 'button', onclick: () => { desde = Math.max(0, desde - 50); cargar(); } }, '← Anteriores'),
@@ -588,27 +597,31 @@ async function vistaUsuarios() {
 async function vistaEncuesta() {
   const r = await llamar('GET', '/api/admin/encuesta');
   const prom = (n) => (n == null ? '—' : n.toFixed(1));
+  const npsTxt = (n) => (n == null ? '—' : Math.round(n));
   return [
     el('div', { class: 'barra-acciones' }, el('h1', null, 'Resultados de la encuesta')),
     el('div', { class: 'kpis' },
       el('div', { class: 'kpi' }, el('div', { class: 'n' }, r.general.respuestas), el('div', { class: 'l' }, 'Respuestas')),
+      el('div', { class: 'kpi' }, el('div', { class: 'n' }, prom(r.general.promedioLogistica)), el('div', { class: 'l' }, 'Logística (1-5)')),
       el('div', { class: 'kpi' }, el('div', { class: 'n' }, prom(r.general.promedioCharlas)), el('div', { class: 'l' }, 'Charlas (1-5)')),
+      el('div', { class: 'kpi' }, el('div', { class: 'n' }, prom(r.general.promedioDifusion)), el('div', { class: 'l' }, 'Difusión (1-5)')),
+      el('div', { class: 'kpi' }, el('div', { class: 'n' }, npsTxt(r.general.nps)), el('div', { class: 'l' }, 'NPS (-100 a 100)')),
       el('div', { class: 'kpi' }, el('div', { class: 'n' }, prom(r.general.promedioEvento)), el('div', { class: 'l' }, 'Evento (1-5)'))),
-    el('div', { class: 'grid grid-2' },
-      el('section', { class: 'card' }, el('h2', null, 'Por sede'),
-        r.porSede.length
-          ? el('table', { class: 'tabla' },
-            el('thead', null, el('tr', null, el('th', null, 'Sede'), el('th', null, 'Respuestas'), el('th', null, 'Charlas'), el('th', null, 'Evento'))),
-            el('tbody', null, r.porSede.map((s) => el('tr', null,
-              el('td', null, s.sede), el('td', null, s.respuestas), el('td', null, prom(s.promedioCharlas)), el('td', null, prom(s.promedioEvento))))))
-          : el('p', { class: 'sub' }, 'Aún no hay respuestas.')),
-      el('section', { class: 'card' }, el('h2', null, 'Por taller'),
-        r.porTaller.length
-          ? el('table', { class: 'tabla' },
-            el('thead', null, el('tr', null, el('th', null, 'Taller'), el('th', null, 'Respuestas'), el('th', null, 'Promedio'))),
-            el('tbody', null, r.porTaller.map((t) => el('tr', null,
-              el('td', null, t.titulo), el('td', null, t.respuestas), el('td', null, prom(t.promedio))))))
-          : el('p', { class: 'sub' }, 'Aún no hay respuestas.'))),
+    el('section', { class: 'card tabla-scroll', style: { marginBottom: '16px' } }, el('h2', null, 'Por sede'),
+      r.porSede.length
+        ? el('table', { class: 'tabla' },
+          el('thead', null, el('tr', null, el('th', null, 'Sede'), el('th', null, 'Respuestas'), el('th', null, 'Logística'), el('th', null, 'Charlas'), el('th', null, 'Difusión'), el('th', null, 'NPS'), el('th', null, 'Evento'))),
+          el('tbody', null, r.porSede.map((s) => el('tr', null,
+            el('td', null, s.sede), el('td', null, s.respuestas), el('td', null, prom(s.promedioLogistica)), el('td', null, prom(s.promedioCharlas)),
+            el('td', null, prom(s.promedioDifusion)), el('td', null, npsTxt(s.nps)), el('td', null, prom(s.promedioEvento))))))
+        : el('p', { class: 'sub' }, 'Aún no hay respuestas.')),
+    el('section', { class: 'card', style: { marginBottom: '16px' } }, el('h2', null, 'Por taller'),
+      r.porTaller.length
+        ? el('table', { class: 'tabla' },
+          el('thead', null, el('tr', null, el('th', null, 'Taller'), el('th', null, 'Respuestas'), el('th', null, 'Promedio'))),
+          el('tbody', null, r.porTaller.map((t) => el('tr', null,
+            el('td', null, t.titulo), el('td', null, t.respuestas), el('td', null, prom(t.promedio))))))
+        : el('p', { class: 'sub' }, 'Aún no hay respuestas.')),
     el('section', { class: 'card', style: { marginTop: '16px' } }, el('h2', null, 'Comentarios'),
       r.comentarios.length
         ? r.comentarios.map((c) => el('div', { class: 'fila' },

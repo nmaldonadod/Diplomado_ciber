@@ -586,6 +586,23 @@ function estrellas(etiquetaAria) {
   return cont;
 }
 
+// Selector 0-10 para la pregunta de recomendación (NPS). El valor actual se lee con nodo.__valor().
+function escalaNps(etiquetaAria) {
+  let valor = null;
+  const botones = Array.from({ length: 11 }, (_, n) => el('button', {
+    type: 'button', class: 'num', 'aria-label': String(n),
+    onclick: () => { valor = n; refrescar(); },
+  }, String(n)));
+  const cont = el('div', { class: 'escala-nps', role: 'radiogroup', 'aria-label': etiquetaAria },
+    el('div', { class: 'botones' }, botones),
+    el('div', { class: 'extremos' }, el('span', null, 'Nada probable'), el('span', null, 'Muy probable')));
+  function refrescar() {
+    botones.forEach((b, i) => b.classList.toggle('activo', i === valor));
+  }
+  cont.__valor = () => valor;
+  return cont;
+}
+
 function vistaEncuesta() {
   // Sin sesión (p. ej. alguien abre el link de la encuesta en otro dispositivo): primero recupera su
   // entrada y, apenas lo logre, vuelve aquí mismo en vez de caer en «Mi entrada».
@@ -618,28 +635,42 @@ function vistaEncuesta() {
 
   const mios = misTalleres().sort((a, b) => a.inicio.localeCompare(b.inicio));
   const aviso = el('div', { class: 'aviso error oculto', role: 'alert' });
+  const eLogistica = estrellas('Organización y logística del evento');
   const eCharlas = estrellas('Charlas y actividades generales');
+  const eDifusion = estrellas('Difusión y comunicación antes del evento');
   const eTalleres = mios.map((t) => ({ taller: t, nodo: estrellas(`Taller: ${t.titulo}`) }));
+  const eNps = escalaNps('Qué tan probable es que recomiendes este evento');
   const eEvento = estrellas('Evaluación general del evento');
   const comentario = el('textarea', { id: 'f-comentario', name: 'comentario', rows: 3, maxlength: 500, placeholder: 'Opcional' });
 
   const form = el('form', { class: 'card', novalidate: true, style: { maxWidth: '560px', margin: '0 auto' } },
     el('span', { class: 'eyebrow' }, 'Encuesta'),
     el('h1', null, 'Cuéntanos qué te pareció'),
-    el('p', { class: 'sub' }, 'Toma menos de un minuto. Tus respuestas nos ayudan a mejorar el próximo evento.'),
+    el('p', { class: 'sub' }, 'Toma un par de minutos. Tus respuestas nos ayudan a mejorar el próximo evento.'),
     aviso,
+    el('h2', { class: 'subtitulo-encuesta' }, 'El evento en general'),
     el('div', { class: 'campo' },
-      el('span', { class: 'etiqueta' }, '¿Cómo calificarías las charlas y actividades generales del evento?'),
+      el('span', { class: 'etiqueta' }, '¿Cómo calificarías la organización y logística (acreditación, horarios, señalética)?'),
+      eLogistica),
+    el('div', { class: 'campo' },
+      el('span', { class: 'etiqueta' }, '¿Cómo calificarías las charlas y actividades generales?'),
       eCharlas),
+    el('div', { class: 'campo' },
+      el('span', { class: 'etiqueta' }, '¿Cómo calificarías la difusión del evento (te enteraste fácil y con tiempo)?'),
+      eDifusion),
+    mios.length ? el('h2', { class: 'subtitulo-encuesta' }, mios.length === 1 ? 'Tu taller' : 'Tus talleres') : null,
     mios.length ? el('div', { class: 'campo' },
-      el('span', { class: 'etiqueta' }, mios.length === 1 ? 'Tu taller' : 'Tus talleres'),
       eTalleres.map(({ taller, nodo }) => el('div', { class: 'campo-taller' },
         el('p', { class: 'sub', style: { fontSize: '.88rem', margin: '0 0 4px' } }, taller.titulo), nodo))) : null,
+    el('h2', { class: 'subtitulo-encuesta' }, 'Para cerrar'),
+    el('div', { class: 'campo' },
+      el('span', { class: 'etiqueta' }, '¿Qué tan probable es que recomiendes este evento a un compañero?'),
+      eNps),
     el('div', { class: 'campo' },
       el('span', { class: 'etiqueta' }, '¿Cómo calificarías el evento?'),
       eEvento),
     el('div', { class: 'campo' },
-      el('label', { for: 'f-comentario' }, '¿Algo que quieras agregar o sugerir?'),
+      el('label', { for: 'f-comentario' }, '¿Qué tema o taller te gustaría el próximo año? ¿Algo que quieras agregar?'),
       comentario),
     el('button', { class: 'btn btn-primario btn-bloque', type: 'submit' }, 'Enviar respuesta'));
 
@@ -650,7 +681,10 @@ function vistaEncuesta() {
     boton.disabled = true;
     try {
       await api('POST', '/api/encuesta', {
+        calificacionLogistica: eLogistica.__valor(),
         calificacionCharlas: eCharlas.__valor(),
+        calificacionDifusion: eDifusion.__valor(),
+        nps: eNps.__valor(),
         calificacionEvento: eEvento.__valor(),
         comentario: comentario.value.trim(),
         talleres: eTalleres.map(({ taller, nodo }) => ({ id: taller.id, calificacion: nodo.__valor() })),

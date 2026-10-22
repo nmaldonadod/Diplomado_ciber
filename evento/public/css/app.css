@@ -463,6 +463,19 @@ legend { font-family: var(--f-ui); font-weight: 700; margin-bottom: 4px }
 .estrella.activa { color: var(--cian); text-shadow: var(--halo-cian) }
 .campo-taller { margin-bottom: 14px }
 .campo-taller:last-child { margin-bottom: 0 }
+.subtitulo-encuesta { font-family: var(--f-ui); font-weight: 700; font-size: 1rem; color: var(--cian); margin: 22px 0 10px; padding-top: 14px; border-top: 1px solid var(--linea) }
+.subtitulo-encuesta:first-of-type { margin-top: 4px; padding-top: 0; border-top: none }
+
+/* Encuesta: selector 0-10 (NPS) */
+.escala-nps { margin-top: 8px }
+.escala-nps .botones { display: flex; flex-wrap: wrap; gap: 5px }
+.escala-nps .num {
+  flex: 1 0 28px; min-width: 28px; height: 36px; padding: 0; border-radius: 8px; border: 1.5px solid var(--linea-fuerte);
+  background: transparent; color: var(--texto-2); font-family: var(--f-ui); font-weight: 600; font-size: .88rem; cursor: pointer; transition: .1s; min-height: 0;
+}
+.escala-nps .num:hover { border-color: var(--cian) }
+.escala-nps .num.activo { background: var(--cian); border-color: var(--cian); color: var(--noche); box-shadow: var(--halo-cian) }
+.escala-nps .extremos { display: flex; justify-content: space-between; margin-top: 6px; font-size: .76rem; color: var(--texto-3) }
 
 @media print {
   body { background: #fff }

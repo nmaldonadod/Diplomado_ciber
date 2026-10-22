@@ -163,7 +163,7 @@ export class EventoDO {
   fichaAdmin(e) {
     return {
       ...this.fichaAcreditador(e), rut: formatearRut(e.rut), email: e.email, telefono: e.telefono, origen: e.origen,
-      creadoEn: e.creado_en, consentimientoEn: e.consentimiento_en,
+      creadoEn: e.creado_en, consentimientoEn: e.consentimiento_en, encuestaRespondida: Boolean(this.db.encuestas.de(e.id)),
     };
   }
 
@@ -749,6 +749,15 @@ export class EventoDO {
       if (!db().estudiantes.porId(eid)) throw fallo('NO_ENCONTRADO', 'Estudiante no encontrado.', 404);
       if (db().inscripciones.cancelar(eid, id(p.tid), { forzar: true })) this.emitirCupos();
       this.audit(c, actorDe(u), 'desinscripcion_admin', `estudiante:${eid} taller:${p.tid}`);
+      return json(200, this.fichaAdmin(await this.hidratar(db().estudiantes.porId(eid))));
+    }, ADMIN);
+
+    // Permite que una persona vuelva a responder la encuesta: borra su respuesta anterior.
+    R('DELETE', '/api/admin/estudiantes/:id/encuesta', async (c, p, u) => {
+      const eid = id(p.id);
+      if (!db().estudiantes.porId(eid)) throw fallo('NO_ENCONTRADO', 'Estudiante no encontrado.', 404);
+      if (!db().encuestas.eliminarDe(eid)) throw fallo('NO_ENCONTRADO', 'Esta persona no había respondido la encuesta.', 404);
+      this.audit(c, actorDe(u), 'encuesta_reabierta', `estudiante:${eid}`);
       return json(200, this.fichaAdmin(await this.hidratar(db().estudiantes.porId(eid))));
     }, ADMIN);
 

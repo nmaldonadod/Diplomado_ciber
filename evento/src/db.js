@@ -128,7 +128,10 @@ const ESQUEMA = `
   CREATE TABLE IF NOT EXISTS encuestas (
     id INTEGER PRIMARY KEY,
     estudiante_id INTEGER NOT NULL UNIQUE REFERENCES estudiantes(id) ON DELETE CASCADE,
+    calificacion_logistica INTEGER NOT NULL CHECK (calificacion_logistica BETWEEN 1 AND 5),
     calificacion_charlas INTEGER NOT NULL CHECK (calificacion_charlas BETWEEN 1 AND 5),
+    calificacion_difusion INTEGER NOT NULL CHECK (calificacion_difusion BETWEEN 1 AND 5),
+    nps INTEGER NOT NULL CHECK (nps BETWEEN 0 AND 10),
     calificacion_evento INTEGER NOT NULL CHECK (calificacion_evento BETWEEN 1 AND 5),
     comentario TEXT NOT NULL DEFAULT '',
     creado_en TEXT NOT NULL
@@ -177,6 +180,12 @@ export function crearDB(storage) {
     sql.exec("ALTER TABLE talleres ADD COLUMN nivel TEXT NOT NULL DEFAULT ''");
   }
   sql.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_est_rut ON estudiantes(rut_idx) WHERE rut_idx IS NOT NULL');
+  // Migración: la encuesta ganó más preguntas después de la primera versión.
+  if (!sql.exec("SELECT 1 FROM pragma_table_info('encuestas') WHERE name = 'nps'").toArray().length) {
+    sql.exec('ALTER TABLE encuestas ADD COLUMN calificacion_logistica INTEGER NOT NULL DEFAULT 3');
+    sql.exec('ALTER TABLE encuestas ADD COLUMN calificacion_difusion INTEGER NOT NULL DEFAULT 3');
+    sql.exec('ALTER TABLE encuestas ADD COLUMN nps INTEGER NOT NULL DEFAULT 5');
+  }
 
   // Transacción reentrante: una llamada anidada se une a la transacción en curso.
   let enTransaccion = false;
@@ -439,14 +448,19 @@ export function crearDB(storage) {
   };
 
   // ---------- encuesta post-evento ----------
+  const NPS_COLS = `COUNT(*) AS respuestas,
+    AVG(calificacion_logistica) AS promedioLogistica, AVG(calificacion_charlas) AS promedioCharlas,
+    AVG(calificacion_difusion) AS promedioDifusion, AVG(calificacion_evento) AS promedioEvento,
+    AVG(nps) AS promedioNps,
+    (100.0 * (COALESCE(SUM(nps >= 9), 0) - COALESCE(SUM(nps <= 6), 0)) / COUNT(*)) AS nps`;
   const encuestas = {
     de: (estudianteId) => p('SELECT * FROM encuestas WHERE estudiante_id = ?').get(estudianteId),
     crear(estudianteId, d) {
       return tx(() => {
         if (encuestas.de(estudianteId)) throw new ErrorNegocio('YA_RESPONDIDA', 'Ya respondiste esta encuesta.', 409);
-        const r = p(`INSERT INTO encuestas (estudiante_id, calificacion_charlas, calificacion_evento, comentario, creado_en)
-                     VALUES (?, ?, ?, ?, ?)`)
-          .run(estudianteId, d.calificacionCharlas, d.calificacionEvento, d.comentario, ahora());
+        const r = p(`INSERT INTO encuestas (estudiante_id, calificacion_logistica, calificacion_charlas, calificacion_difusion, nps, calificacion_evento, comentario, creado_en)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+          .run(estudianteId, d.calificacionLogistica, d.calificacionCharlas, d.calificacionDifusion, d.nps, d.calificacionEvento, d.comentario, ahora());
         const encuestaId = Number(r.lastInsertRowid);
         for (const t of d.talleres) {
           p('INSERT INTO encuestas_talleres (encuesta_id, taller_id, calificacion) VALUES (?, ?, ?)').run(encuestaId, t.id, t.calificacion);
@@ -454,11 +468,11 @@ export function crearDB(storage) {
         return encuestaId;
       });
     },
+    // Permite que un estudiante vuelva a responder (p. ej. a pedido suyo): borra su respuesta anterior.
+    eliminarDe: (estudianteId) => p('DELETE FROM encuestas WHERE estudiante_id = ?').run(estudianteId).changes > 0,
     resumen: () => ({
-      general: p(`SELECT COUNT(*) AS respuestas, AVG(calificacion_charlas) AS promedioCharlas, AVG(calificacion_evento) AS promedioEvento
-                  FROM encuestas`).get(),
-      porSede: p(`SELECT est.sede, COUNT(*) AS respuestas, AVG(enc.calificacion_charlas) AS promedioCharlas, AVG(enc.calificacion_evento) AS promedioEvento
-                  FROM encuestas enc JOIN estudiantes est ON est.id = enc.estudiante_id
+      general: p(`SELECT ${NPS_COLS} FROM encuestas`).get(),
+      porSede: p(`SELECT est.sede, ${NPS_COLS} FROM encuestas enc JOIN estudiantes est ON est.id = enc.estudiante_id
                   GROUP BY est.sede ORDER BY 2 DESC`).all(),
       porTaller: p(`SELECT t.id, t.titulo, COUNT(*) AS respuestas, AVG(et.calificacion) AS promedio
                     FROM encuestas_talleres et JOIN talleres t ON t.id = et.taller_id

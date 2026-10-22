@@ -38,26 +38,34 @@ test('validación del registro de estudiantes', () => {
 });
 
 test('validación de la encuesta post-evento', () => {
-  const ok = v.validarEncuesta({ calificacionCharlas: 5, calificacionEvento: '4', comentario: ' Muy bueno ', talleres: [{ id: 1, calificacion: 3 }, { id: 2, calificacion: '5' }] }, [1, 2]);
-  assert.deepEqual(ok.errores, {});
-  assert.deepEqual(ok.datos, { calificacionCharlas: 5, calificacionEvento: 4, comentario: 'Muy bueno', talleres: [{ id: 1, calificacion: 3 }, { id: 2, calificacion: 5 }] });
+  const base = { calificacionLogistica: 4, calificacionCharlas: 5, calificacionDifusion: 3, nps: 9, calificacionEvento: '4' };
 
-  // calificaciones fuera de rango o no numéricas
-  const malo = v.validarEncuesta({ calificacionCharlas: 0, calificacionEvento: 6, talleres: [] }, []);
+  const ok = v.validarEncuesta({ ...base, comentario: ' Muy bueno ', talleres: [{ id: 1, calificacion: 3 }, { id: 2, calificacion: '5' }] }, [1, 2]);
+  assert.deepEqual(ok.errores, {});
+  assert.deepEqual(ok.datos, {
+    calificacionLogistica: 4, calificacionCharlas: 5, calificacionDifusion: 3, nps: 9, calificacionEvento: 4,
+    comentario: 'Muy bueno', talleres: [{ id: 1, calificacion: 3 }, { id: 2, calificacion: 5 }],
+  });
+
+  // calificaciones fuera de rango o no numéricas (1-5), incluido el NPS (0-10)
+  const malo = v.validarEncuesta({ ...base, calificacionCharlas: 0, calificacionEvento: 6, nps: 11, talleres: [] }, []);
   assert.ok(malo.errores.calificacionCharlas);
   assert.ok(malo.errores.calificacionEvento);
+  assert.ok(malo.errores.nps);
+  // el NPS sí acepta 0 (es válido, no «falta»)
+  assert.deepEqual(v.validarEncuesta({ ...base, nps: 0, talleres: [] }, []).errores, {});
 
   // falta calificar uno de los talleres propios
-  const incompleta = v.validarEncuesta({ calificacionCharlas: 3, calificacionEvento: 3, talleres: [{ id: 1, calificacion: 4 }] }, [1, 2]);
+  const incompleta = v.validarEncuesta({ ...base, talleres: [{ id: 1, calificacion: 4 }] }, [1, 2]);
   assert.ok(incompleta.errores.talleres);
 
   // un taller que no es suyo se ignora, no cuela una calificación ajena
-  const ajeno = v.validarEncuesta({ calificacionCharlas: 3, calificacionEvento: 3, talleres: [{ id: 99, calificacion: 5 }] }, []);
+  const ajeno = v.validarEncuesta({ ...base, talleres: [{ id: 99, calificacion: 5 }] }, []);
   assert.deepEqual(ajeno.errores, {});
   assert.deepEqual(ajeno.datos.talleres, []);
 
   // comentario vacío es válido (es opcional)
-  assert.deepEqual(v.validarEncuesta({ calificacionCharlas: 3, calificacionEvento: 3, talleres: [] }, []).errores, {});
+  assert.deepEqual(v.validarEncuesta({ ...base, talleres: [] }, []).errores, {});
 });
 
 test('validación de talleres y contraseñas', () => {
