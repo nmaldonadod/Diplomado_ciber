@@ -74,13 +74,14 @@
   .visor::before{content:"▶ APUNTANDO";position:absolute;left:14px;top:50%;transform:translateY(-50%);font-family:var(--mono);
     font-size:.62rem;letter-spacing:.14em;color:var(--rojo);z-index:2;writing-mode:horizontal-tb}
   .visor::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;
-    background:linear-gradient(180deg,rgba(7,8,10,.9),transparent 30%,transparent 70%,rgba(7,8,10,.9)),
+    background:linear-gradient(180deg,rgba(7,8,10,.55),transparent 22%,transparent 78%,rgba(7,8,10,.55)),
       repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 1px,transparent 1px 3px)}
   #visorNombre{position:absolute;inset:0 16px 0 110px;display:flex;align-items:center;justify-content:center;
     font-size:clamp(1.3rem,2.6vw,2.1rem);font-weight:700;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #visorNombre span{overflow:hidden;text-overflow:ellipsis}
-  #visorNombre.paso span{animation:paso .09s ease-out}
-  @keyframes paso{from{transform:translateY(-70%);opacity:.3;filter:blur(2px)}}
+  #visorNombre span{display:block;max-width:100%}
+  #visorNombre.paso span{animation:paso .12s ease-out}
+  @keyframes paso{from{transform:scale(1.08);color:#ff6b5e}}
   .visor.girando{border-color:rgba(225,37,27,.6);box-shadow:inset 0 0 22px rgba(0,0,0,.9),0 0 26px rgba(225,37,27,.35)}
   .visor.girando #visorNombre{color:#fff}
   .visor.final{border-color:var(--rojo);animation:visorFin .5s ease-in-out 3}
@@ -378,6 +379,7 @@
   const cv = $('#rueda'), ctx = cv.getContext('2d'), wrap = $('#ruedaWrap'), puntero = $('#puntero');
   const iso = new Image(); iso.src = 'assets/inacap-isotipo.png'; iso.onload = () => dibujar();
   const COLORES = [['#e1251b', '#fff'], ['#1b1e24', '#fff'], ['#b82b2b', '#fff'], ['#eceef0', '#1b1e24'], ['#2c313a', '#fff'], ['#8f1a14', '#fff']];
+  const COLORES_MUCHOS = [['#e1251b', '#fff'], ['#1b1e24', '#fff'], ['#b82b2b', '#fff'], ['#2c313a', '#fff']];
   let rot = 0, girando = false, tam = 0, dpr = 1;
 
   function medir() {
@@ -387,9 +389,10 @@
     dibujar();
   }
   function colorDe(i, n) {
-    let c = i % COLORES.length;
+    const pal = n > 60 ? COLORES_MUCHOS : COLORES;
+    let c = i % pal.length;
     if (n > 1 && i === n - 1 && c === 0) c = 2; // evita dos segmentos iguales contiguos al cerrar el círculo
-    return COLORES[c];
+    return pal[c];
   }
   function recortar(texto, max) {
     if (ctx.measureText(texto).width <= max) return texto;
@@ -413,8 +416,8 @@
       ctx.fillText('Agrega participantes ➜', 0, R * .45);
     } else {
       const seg = Math.PI * 2 / n;
-      const fs = Math.max(7 * dpr, Math.min(R * .085, seg * r * .6, 40 * dpr));
-      const conTexto = seg * r >= 6.5 * dpr;
+      const fs = Math.min(R * .085, seg * r * .6, 40 * dpr);
+      const conTexto = fs >= 11 * dpr;
       for (let i = 0; i < n; i++) {
         const a0 = -Math.PI / 2 + i * seg, [bg, fg] = colorDe(i, n);
         ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, a0, a0 + seg); ctx.closePath();
