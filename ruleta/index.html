@@ -65,7 +65,28 @@
   #tituloEvento:hover,#tituloEvento:focus{border-bottom-color:var(--borde)}
   #tituloEvento span{color:var(--rojo)}
 
-  .rueda-wrap{position:relative;width:max(280px,min(calc(100vh - 330px),100%,760px));aspect-ratio:1}
+  .rueda-wrap{position:relative;width:max(280px,min(calc(100vh - 410px),100%,760px));aspect-ratio:1}
+
+  /* ===== Visor del nombre bajo el puntero ===== */
+  .visor{position:relative;width:min(640px,100%);height:64px;border-radius:12px;overflow:hidden;
+    background:linear-gradient(180deg,#07080a,#14171c 50%,#07080a);border:1px solid var(--borde);
+    box-shadow:inset 0 0 22px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.03)}
+  .visor::before{content:"▶ APUNTANDO";position:absolute;left:14px;top:50%;transform:translateY(-50%);font-family:var(--mono);
+    font-size:.62rem;letter-spacing:.14em;color:var(--rojo);z-index:2;writing-mode:horizontal-tb}
+  .visor::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;
+    background:linear-gradient(180deg,rgba(7,8,10,.9),transparent 30%,transparent 70%,rgba(7,8,10,.9)),
+      repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 1px,transparent 1px 3px)}
+  #visorNombre{position:absolute;inset:0 16px 0 110px;display:flex;align-items:center;justify-content:center;
+    font-size:clamp(1.3rem,2.6vw,2.1rem);font-weight:700;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #visorNombre span{overflow:hidden;text-overflow:ellipsis}
+  #visorNombre.paso span{animation:paso .09s ease-out}
+  @keyframes paso{from{transform:translateY(-70%);opacity:.3;filter:blur(2px)}}
+  .visor.girando{border-color:rgba(225,37,27,.6);box-shadow:inset 0 0 22px rgba(0,0,0,.9),0 0 26px rgba(225,37,27,.35)}
+  .visor.girando #visorNombre{color:#fff}
+  .visor.final{border-color:var(--rojo);animation:visorFin .5s ease-in-out 3}
+  .visor.final #visorNombre{color:#fff;text-shadow:0 0 18px rgba(225,37,27,.95)}
+  @keyframes visorFin{50%{box-shadow:inset 0 0 22px rgba(0,0,0,.9),0 0 50px rgba(225,37,27,.8)}}
+  .visor.inactivo #visorNombre{color:var(--gris);font-size:1.1rem;font-weight:600}
   .rueda-wrap::before{content:"";position:absolute;inset:-14px;border-radius:50%;
     background:conic-gradient(from 0deg,var(--rojo),transparent 25%,var(--rojo) 50%,transparent 75%,var(--rojo));
     opacity:.35;filter:blur(18px);animation:girar 12s linear infinite}
@@ -180,6 +201,8 @@
     .premio{width:100%}.premio input{width:100%}
     .btn-girar{width:100%}
     .ayuda{display:none}
+    .visor::before{display:none}
+    #visorNombre{inset:0 12px}
   }
 </style>
 </head>
@@ -213,6 +236,8 @@
       <div class="tag">&gt; sudo ./sorteo --run <b>█</b></div>
       <h1 id="tituloEvento" contenteditable="true" spellcheck="false" title="Haz clic para editar el nombre del evento">Gran <span>Sorteo</span></h1>
     </div>
+
+    <div class="visor inactivo" id="visor"><div id="visorNombre"><span>— listo para girar —</span></div></div>
 
     <div class="rueda-wrap" id="ruedaWrap">
       <svg class="puntero" id="puntero" viewBox="0 0 54 66">
@@ -388,8 +413,8 @@
       ctx.fillText('Agrega participantes ➜', 0, R * .45);
     } else {
       const seg = Math.PI * 2 / n;
-      const fs = Math.max(9 * dpr, Math.min(R * .085, seg * r * .55, 40 * dpr));
-      const conTexto = seg * r * .62 >= 7 * dpr;
+      const fs = Math.max(7 * dpr, Math.min(R * .085, seg * r * .6, 40 * dpr));
+      const conTexto = seg * r >= 6.5 * dpr;
       for (let i = 0; i < n; i++) {
         const a0 = -Math.PI / 2 + i * seg, [bg, fg] = colorDe(i, n);
         ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, a0, a0 + seg); ctx.closePath();
@@ -402,6 +427,11 @@
           ctx.restore();
         }
       }
+      // segmento bajo el puntero
+      const a0 = -Math.PI / 2 + indiceEn(rot) * seg;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, a0, a0 + seg); ctx.closePath();
+      ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 * dpr; ctx.stroke();
       // brillo
       const gb = ctx.createRadialGradient(0, 0, r * .2, 0, 0, r);
       gb.addColorStop(0, 'rgba(255,255,255,0)'); gb.addColorStop(.85, 'rgba(255,255,255,0)'); gb.addColorStop(1, 'rgba(0,0,0,.28)');
@@ -431,6 +461,24 @@
     return Math.floor((((-ang) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / seg) % n;
   };
 
+  const visor = $('#visor'), visorNom = $('#visorNombre');
+  let ultimoPaso = 0;
+  function visorMostrar(nombre, animar) {
+    const sp = document.createElement('span'); sp.textContent = nombre;
+    visorNom.replaceChildren(sp);
+    const ahora = performance.now();
+    // la animación de entrada solo cuando los nombres pasan lo bastante lento para leerse
+    if (animar && ahora - ultimoPaso > 70) { visorNom.classList.remove('paso'); void visorNom.offsetWidth; visorNom.classList.add('paso'); }
+    ultimoPaso = ahora;
+  }
+  function visorReposo() {
+    visor.classList.remove('girando', 'final');
+    const n = estado.nombres.length;
+    visor.classList.toggle('inactivo', !n);
+    if (n) visorMostrar(estado.nombres[indiceEn(rot)], false);
+    else visorMostrar('— agrega participantes —', false);
+  }
+
   // animación ociosa de las luces
   (function idle() { if (!girando) dibujar(); setTimeout(() => requestAnimationFrame(idle), 120); })();
 
@@ -440,14 +488,16 @@
     if (n < 1) return toast('Agrega participantes primero');
     if (actx && actx.state === 'suspended') actx.resume();
     audio();
-    girando = true; wrap.classList.add('girando'); $('#btnGirar').disabled = true; txt.disabled = true;
+    girando = true; wrap.classList.add('girando'); visor.classList.remove('inactivo', 'final'); visor.classList.add('girando'); $('#btnGirar').disabled = true; txt.disabled = true;
 
     const ganador = randInt(n), seg = Math.PI * 2 / n;
     const local = (ganador + .12 + rand() * .76) * seg;
     const actual = ((rot % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
     const delta = (((-local - actual) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-    const inicio = rot, fin = rot + (7 + randInt(4)) * Math.PI * 2 + delta;
-    const dur = 7000 + rand() * 2000, t0 = performance.now();
+    // con muchos participantes: menos vueltas y un final más largo para que los nombres se lean
+    const muchos = n > 60;
+    const inicio = rot, fin = rot + ((muchos ? 4 : 7) + randInt(3)) * Math.PI * 2 + delta;
+    const dur = (muchos ? 10000 : 7000) + rand() * 2000, t0 = performance.now();
     let ultimo = indiceEn(rot);
     const ease = t => 1 - Math.pow(1 - t, 4);
 
@@ -455,10 +505,10 @@
       const t = Math.min(1, (now - t0) / dur);
       rot = inicio + (fin - inicio) * ease(t);
       const idx = indiceEn(rot);
-      if (idx !== ultimo) { ultimo = idx; tick(); puntero.classList.remove('tic'); void puntero.offsetWidth; puntero.classList.add('tic'); }
+      if (idx !== ultimo) { ultimo = idx; tick(); visorMostrar(estado.nombres[idx], true); puntero.classList.remove('tic'); void puntero.offsetWidth; puntero.classList.add('tic'); }
       dibujar();
       if (t < 1) requestAnimationFrame(paso);
-      else setTimeout(() => celebrar(indiceEn(rot)), 350);
+      else { visor.classList.remove('girando'); visor.classList.add('final'); setTimeout(() => celebrar(indiceEn(rot)), 900); }
     })(t0);
   }
 
@@ -584,6 +634,7 @@
       };
       ul.prepend(li);
     });
+    if (!girando) visorReposo();
     dibujar();
   }
   const parsear = s => s.split(/\r?\n/).map(l => l.split(/[;\t]/)[0].replace(/^"|"$/g, '').trim()).filter(Boolean);
