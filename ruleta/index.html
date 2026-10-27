@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ruleta de Sorteo · INACAP</title>
+<link rel="icon" href="assets/inacap-isotipo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --rojo:#e1251b;
+    --rojo-logo:#b82b2b;
+    --rojo-osc:#8f1a14;
+    --tinta:#0d0f12;
+    --panel:#15181d;
+    --panel-2:#1c2027;
+    --borde:#2a2f38;
+    --texto:#eef0f3;
+    --gris:#9aa1ab;
+    --verde:#3ddc84;
+    --font:'Rajdhani','Segoe UI',Arial,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  html{overflow-x:hidden}
+  body{font-family:var(--font);color:var(--texto);background:var(--tinta);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+  button,input,textarea{font-family:inherit;color:inherit}
+
+  /* ===== Fondo ===== */
+  #bg{position:fixed;inset:0;z-index:0;opacity:.22;pointer-events:none}
+  .grid-bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(ellipse at 30% 40%,rgba(225,37,27,.16),transparent 55%),
+      radial-gradient(ellipse at 85% 90%,rgba(225,37,27,.08),transparent 50%),
+      linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px) 0 0/40px 40px,
+      linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px) 0 0/40px 40px}
+  #fx{position:fixed;inset:0;z-index:90;pointer-events:none}
+
+  /* ===== Header ===== */
+  header{position:relative;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:20px;
+    padding:18px 32px;border-bottom:1px solid var(--borde);background:rgba(13,15,18,.7);backdrop-filter:blur(8px)}
+  .marca{display:flex;align-items:center;gap:22px;min-width:0}
+  .marca img{height:52px;width:auto;display:block}
+  .marca .sep{width:1px;height:44px;background:var(--borde)}
+  .area{line-height:1.15;min-width:0}
+  .area small{display:block;font-family:var(--mono);font-size:.7rem;color:var(--rojo);letter-spacing:.18em;text-transform:uppercase}
+  .area strong{display:block;font-size:1.15rem;font-weight:700;letter-spacing:.02em}
+  .acciones{display:flex;gap:8px}
+  .icono{width:42px;height:42px;border-radius:8px;border:1px solid var(--borde);background:var(--panel);cursor:pointer;
+    display:grid;place-items:center;transition:.15s}
+  .icono:hover{border-color:var(--rojo);color:var(--rojo)}
+  .icono svg{width:20px;height:20px}
+
+  /* ===== Layout ===== */
+  main{position:relative;z-index:2;display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:28px;padding:24px 32px 32px;
+    max-width:1600px;margin:0 auto;overflow-x:clip}
+  .escenario{display:flex;flex-direction:column;align-items:center;gap:18px;min-width:0}
+  .titulo-evento{text-align:center}
+  .titulo-evento .tag{font-family:var(--mono);font-size:.78rem;color:var(--gris);letter-spacing:.2em}
+  .titulo-evento .tag b{color:var(--verde);font-weight:400}
+  #tituloEvento{font-size:clamp(1.8rem,3.4vw,3rem);font-weight:700;letter-spacing:.04em;text-transform:uppercase;line-height:1.05;
+    outline:none;border-bottom:1px dashed transparent;padding:0 6px}
+  #tituloEvento:hover,#tituloEvento:focus{border-bottom-color:var(--borde)}
+  #tituloEvento span{color:var(--rojo)}
+
+  .rueda-wrap{position:relative;width:max(280px,min(calc(100vh - 330px),100%,760px));aspect-ratio:1}
+  .rueda-wrap::before{content:"";position:absolute;inset:-14px;border-radius:50%;
+    background:conic-gradient(from 0deg,var(--rojo),transparent 25%,var(--rojo) 50%,transparent 75%,var(--rojo));
+    opacity:.35;filter:blur(18px);animation:girar 12s linear infinite}
+  .rueda-wrap.girando::before{opacity:.8;animation-duration:2s}
+  @keyframes girar{to{transform:rotate(360deg)}}
+  #rueda{position:relative;width:100%;height:100%;display:block;cursor:pointer}
+  .puntero{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:54px;height:66px;z-index:3;
+    filter:drop-shadow(0 4px 10px rgba(0,0,0,.6)) drop-shadow(0 0 12px rgba(225,37,27,.6));transform-origin:50% 22%}
+  .puntero.tic{animation:tic .12s ease-out}
+  @keyframes tic{0%{transform:translateX(-50%) rotate(0)}40%{transform:translateX(-50%) rotate(-18deg)}100%{transform:translateX(-50%) rotate(0)}}
+
+  .controles{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .premio{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--borde);border-radius:10px;padding:0 14px;height:56px}
+  .premio label{font-family:var(--mono);font-size:.72rem;color:var(--gris);letter-spacing:.12em}
+  .premio input{background:transparent;border:0;outline:none;font-size:1.1rem;font-weight:600;width:220px;min-width:0}
+  .btn-girar{height:56px;padding:0 42px;border:0;border-radius:10px;cursor:pointer;font-size:1.35rem;font-weight:700;letter-spacing:.14em;
+    background:linear-gradient(180deg,var(--rojo),var(--rojo-logo));color:#fff;text-transform:uppercase;
+    box-shadow:0 8px 28px rgba(225,37,27,.4),inset 0 1px 0 rgba(255,255,255,.25);transition:.15s}
+  .btn-girar:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 12px 36px rgba(225,37,27,.55)}
+  .btn-girar:disabled{opacity:.45;cursor:not-allowed}
+  .ayuda{font-family:var(--mono);font-size:.72rem;color:var(--gris)}
+  kbd{border:1px solid var(--borde);border-bottom-width:2px;border-radius:4px;padding:1px 6px;background:var(--panel)}
+
+  /* ===== Panel ===== */
+  aside{background:rgba(21,24,29,.92);border:1px solid var(--borde);border-radius:14px;display:flex;flex-direction:column;
+    min-height:0;max-height:calc(100vh - 140px);position:sticky;top:24px;overflow:hidden}
+  .tabs{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--borde)}
+  .tabs button{background:none;border:0;padding:16px 10px;font-size:1.05rem;font-weight:700;letter-spacing:.06em;cursor:pointer;
+    color:var(--gris);border-bottom:2px solid transparent;text-transform:uppercase}
+  .tabs button.activo{color:var(--texto);border-bottom-color:var(--rojo)}
+  .tabs .cnt{font-family:var(--mono);font-size:.75rem;background:var(--panel-2);border-radius:20px;padding:2px 8px;margin-left:6px;color:var(--texto)}
+  .tabs button.activo .cnt{background:var(--rojo)}
+  .vista{display:none;flex-direction:column;gap:12px;padding:16px;min-height:0;flex:1}
+  .vista.activa{display:flex}
+  .vista > .btn{flex:none}
+  textarea{flex:1;min-height:260px;resize:none;background:var(--tinta);border:1px solid var(--borde);border-radius:10px;padding:12px 14px;
+    font-family:var(--mono);font-size:.88rem;line-height:1.6;outline:none}
+  textarea:focus{border-color:var(--rojo)}
+  .fila{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{flex:1;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 12px;border-radius:8px;
+    border:1px solid var(--borde);background:var(--panel-2);cursor:pointer;font-weight:600;font-size:.95rem;transition:.15s;white-space:nowrap}
+  .btn:hover{border-color:var(--rojo)}
+  .btn svg{width:16px;height:16px;flex:none}
+  .btn.peligro:hover{background:var(--rojo-osc);border-color:var(--rojo)}
+  .drop{border:1.5px dashed var(--borde);border-radius:10px;padding:14px;text-align:center;color:var(--gris);font-size:.95rem;cursor:pointer;transition:.15s}
+  .drop:hover,.drop.sobre{border-color:var(--rojo);color:var(--texto);background:rgba(225,37,27,.06)}
+  .drop b{color:var(--rojo)}
+  .opcion{display:flex;align-items:center;gap:10px;font-size:.98rem;cursor:pointer;user-select:none}
+  .opcion input{accent-color:var(--rojo);width:18px;height:18px}
+  .info{font-family:var(--mono);font-size:.75rem;color:var(--gris)}
+
+  #listaGanadores{list-style:none;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;min-height:200px}
+  #listaGanadores li{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:12px;background:var(--tinta);
+    border:1px solid var(--borde);border-left:3px solid var(--rojo);border-radius:8px;padding:10px 12px;animation:entra .5s ease-out}
+  @keyframes entra{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+  #listaGanadores .n{font-family:var(--mono);font-weight:700;color:var(--rojo);font-size:1.1rem;text-align:center}
+  #listaGanadores .nom{font-weight:700;font-size:1.12rem;line-height:1.15;word-break:break-word}
+  #listaGanadores .meta{font-family:var(--mono);font-size:.72rem;color:var(--gris);margin-top:2px}
+  #listaGanadores .x{background:none;border:0;color:var(--gris);cursor:pointer;font-size:1.2rem;padding:4px 6px;border-radius:4px}
+  #listaGanadores .x:hover{color:var(--rojo);background:var(--panel-2)}
+  .vacio{color:var(--gris);text-align:center;padding:40px 10px;font-size:1rem}
+  .vacio div{font-size:2.4rem;margin-bottom:6px}
+
+  /* ===== Modal ganador ===== */
+  .modal{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;padding:16px;
+    background:radial-gradient(circle at center,rgba(143,26,20,.55),rgba(5,6,8,.92) 70%);backdrop-filter:blur(6px)}
+  .modal.abierto{display:flex;animation:fade .3s}
+  @keyframes fade{from{opacity:0}}
+  .tarjeta{position:relative;width:min(860px,100%);text-align:center;padding:44px 36px 36px;border-radius:20px;
+    background:linear-gradient(180deg,#1a1d23,#0f1114);border:1px solid rgba(225,37,27,.5);
+    box-shadow:0 0 0 1px rgba(255,255,255,.04),0 0 80px rgba(225,37,27,.45),0 30px 80px rgba(0,0,0,.6);
+    animation:pop .6s cubic-bezier(.2,1.6,.4,1)}
+  @keyframes pop{from{transform:scale(.4) rotate(-6deg);opacity:0}}
+  .tarjeta::before,.tarjeta::after{content:"";position:absolute;width:40px;height:40px;border:3px solid var(--rojo)}
+  .tarjeta::before{top:12px;left:12px;border-right:0;border-bottom:0}
+  .tarjeta::after{bottom:12px;right:12px;border-left:0;border-top:0}
+  .tarjeta img{height:48px;margin-bottom:22px}
+  .term{font-family:var(--mono);font-size:.85rem;color:var(--verde);letter-spacing:.08em;min-height:1.3em;margin-bottom:10px}
+  .trofeo{font-size:4.2rem;line-height:1;animation:rebota 1.2s ease-in-out infinite}
+  @keyframes rebota{50%{transform:translateY(-10px) scale(1.06)}}
+  .gana-tit{font-size:clamp(1.6rem,4vw,2.6rem);font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--rojo);margin:10px 0 4px;
+    text-shadow:0 0 24px rgba(225,37,27,.7)}
+  .gana-num{font-family:var(--mono);color:var(--gris);font-size:.9rem;letter-spacing:.15em}
+  #nombreGanador{font-size:clamp(2.4rem,7vw,5rem);font-weight:700;line-height:1.05;margin:22px 0 10px;word-break:break-word;
+    text-shadow:0 0 30px rgba(255,255,255,.35)}
+  #nombreGanador.listo{animation:brillo 1.6s ease-in-out infinite}
+  @keyframes brillo{50%{text-shadow:0 0 40px rgba(225,37,27,.9),0 0 10px rgba(255,255,255,.6)}}
+  #premioGanador{display:inline-block;font-size:1.25rem;font-weight:600;background:rgba(225,37,27,.14);border:1px solid rgba(225,37,27,.5);
+    padding:6px 18px;border-radius:30px;margin-bottom:8px}
+  #premioGanador:empty{display:none}
+  .modal .fila{justify-content:center;margin-top:26px}
+  .modal .btn{flex:0 1 auto;padding:13px 26px;font-size:1.05rem}
+  .modal .btn.primario{background:var(--rojo);border-color:var(--rojo);color:#fff}
+  .modal .btn.primario:hover{background:var(--rojo-logo)}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);z-index:100;background:var(--panel-2);
+    border:1px solid var(--borde);border-left:3px solid var(--verde);padding:12px 20px;border-radius:8px;font-weight:600;transition:.3s;max-width:calc(100% - 32px)}
+  .toast.ver{transform:translateX(-50%) translateY(0)}
+
+  footer{position:relative;z-index:2;text-align:center;padding:0 16px 20px;font-family:var(--mono);font-size:.72rem;color:#5d636c;letter-spacing:.1em}
+
+  @media (max-width:1100px){
+    main{grid-template-columns:1fr;padding:18px 16px}
+    aside{position:static;max-height:none}
+    textarea{min-height:200px}
+    #listaGanadores{max-height:420px}
+  }
+  @media (max-width:640px){
+    header{padding:12px 16px}
+    .marca img{height:34px}
+    .marca .sep,.area{display:none}
+    .premio{width:100%}.premio input{width:100%}
+    .btn-girar{width:100%}
+    .ayuda{display:none}
+  }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="grid-bg"></div>
+<canvas id="fx"></canvas>
+
+<header>
+  <div class="marca">
+    <img src="assets/inacap-logo-blanco.png" alt="INACAP 60 años">
+    <div class="sep"></div>
+    <div class="area">
+      <small>// Área Académica</small>
+      <strong>Informática, Ciberseguridad y Telecomunicaciones</strong>
+    </div>
+  </div>
+  <div class="acciones">
+    <button class="icono" id="btnSonido" title="Sonido (M)">
+      <svg id="icoSonido" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>
+    </button>
+    <button class="icono" id="btnPantalla" title="Pantalla completa (F)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+    </button>
+  </div>
+</header>
+
+<main>
+  <section class="escenario">
+    <div class="titulo-evento">
+      <div class="tag">&gt; sudo ./sorteo --run <b>█</b></div>
+      <h1 id="tituloEvento" contenteditable="true" spellcheck="false" title="Haz clic para editar el nombre del evento">Gran <span>Sorteo</span></h1>
+    </div>
+
+    <div class="rueda-wrap" id="ruedaWrap">
+      <svg class="puntero" id="puntero" viewBox="0 0 54 66">
+        <defs><linearGradient id="gp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff4a3d"/><stop offset="1" stop-color="#b82b2b"/></linearGradient></defs>
+        <path d="M27 64 L4 16 A25 25 0 1 1 50 16 Z" fill="url(#gp)" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+        <circle cx="27" cy="16" r="7" fill="#fff"/>
+      </svg>
+      <canvas id="rueda"></canvas>
+    </div>
+
+    <div class="controles">
+      <div class="premio">
+        <label for="premio">PREMIO</label>
+        <input id="premio" placeholder="(opcional)" maxlength="60">
+      </div>
+      <button class="btn-girar" id="btnGirar">¡Girar!</button>
+    </div>
+    <div class="ayuda"><kbd>Espacio</kbd> girar · <kbd>F</kbd> pantalla completa · <kbd>M</kbd> sonido · clic en la ruleta también gira</div>
+  </section>
+
+  <aside>
+    <div class="tabs">
+      <button class="activo" data-tab="participantes">Participantes<span class="cnt" id="cntPart">0</span></button>
+      <button data-tab="ganadores">Ganadores<span class="cnt" id="cntGan">0</span></button>
+    </div>
+
+    <div class="vista activa" id="vista-participantes">
+      <div class="drop" id="drop">
+        📂 <b>Sube un archivo</b> o arrástralo aquí<br>
+        <span class="info">.txt · .csv · .xlsx — un nombre por fila</span>
+        <input type="file" id="archivo" accept=".txt,.csv,.xlsx,.xls" hidden>
+      </div>
+      <textarea id="nombres" spellcheck="false" placeholder="O pega los nombres aquí, uno por línea…"></textarea>
+      <div class="info" id="infoPart"></div>
+      <label class="opcion"><input type="checkbox" id="quitarGanador" checked> Quitar al ganador de la ruleta</label>
+      <div class="fila">
+        <button class="btn" id="btnMezclar" title="Mezclar orden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Mezclar</button>
+        <button class="btn" id="btnDuplicados" title="Eliminar nombres repetidos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>Sin duplicados</button>
+        <button class="btn peligro" id="btnLimpiar" title="Vaciar lista"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>Vaciar</button>
+      </div>
+    </div>
+
+    <div class="vista" id="vista-ganadores">
+      <ul id="listaGanadores"></ul>
+      <div class="fila">
+        <button class="btn" id="btnExportar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Descargar CSV</button>
+        <button class="btn" id="btnCopiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>Copiar</button>
+      </div>
+      <button class="btn peligro" id="btnReiniciar">↺ Reiniciar sorteo (devolver ganadores a la ruleta)</button>
+    </div>
+  </aside>
+</main>
+
+<footer>INACAP · ÁREA INFORMÁTICA, CIBERSEGURIDAD Y TELECOMUNICACIONES · SORTEO CON ALEATORIEDAD CRIPTOGRÁFICA (crypto.getRandomValues)</footer>
+
+<div class="modal" id="modal">
+  <div class="tarjeta">
+    <img src="assets/inacap-logo-blanco.png" alt="INACAP">
+    <div class="term" id="term"></div>
+    <div class="trofeo">🏆</div>
+    <div class="gana-tit">¡Tenemos ganador!</div>
+    <div class="gana-num" id="numGanador"></div>
+    <div id="nombreGanador"></div>
+    <div id="premioGanador"></div>
+    <div class="fila">
+      <button class="btn primario" id="btnSeguir">Continuar ➜</button>
+      <button class="btn" id="btnAnular" title="Si la persona no está presente: no se registra y vuelve a la ruleta">No está presente · anular</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<script>
+(() => {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const LS = 'inacap-ruleta-v1';
+
+  // ---------- Estado ----------
+  let estado = { nombres: [], ganadores: [], titulo: null, quitar: true, sonido: true };
+  try { Object.assign(estado, JSON.parse(localStorage.getItem(LS)) || {}); } catch (e) {}
+  const guardar = () => { try { localStorage.setItem(LS, JSON.stringify(estado)); } catch (e) {} };
+
+  if (!estado.nombres.length && !estado.ganadores.length) {
+    estado.nombres = ['Participante 1','Participante 2','Participante 3','Participante 4','Participante 5','Participante 6','Participante 7','Participante 8'];
+  }
+
+  const txt = $('#nombres'), titulo = $('#tituloEvento');
+  txt.value = estado.nombres.join('\n');
+  if (estado.titulo) titulo.innerHTML = estado.titulo;
+  $('#quitarGanador').checked = estado.quitar;
+
+  // ---------- Aleatoriedad criptográfica ----------
+  const rand = () => crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
+  const randInt = n => {
+    // Muestreo por rechazo para evitar sesgo de módulo
+    const lim = Math.floor(4294967296 / n) * n, b = new Uint32Array(1);
+    do crypto.getRandomValues(b); while (b[0] >= lim);
+    return b[0] % n;
+  };
+
+  // ---------- Audio ----------
+  let actx = null;
+  const audio = () => (actx ||= new (window.AudioContext || window.webkitAudioContext)());
+  function tono(f, t0, dur, tipo = 'square', vol = .08) {
+    if (!estado.sonido) return;
+    const a = audio(), o = a.createOscillator(), g = a.createGain();
+    o.type = tipo; o.frequency.setValueAtTime(f, a.currentTime + t0);
+    g.gain.setValueAtTime(vol, a.currentTime + t0);
+    g.gain.exponentialRampToValueAtTime(.0001, a.currentTime + t0 + dur);
+    o.connect(g).connect(a.destination); o.start(a.currentTime + t0); o.stop(a.currentTime + t0 + dur + .02);
+  }
+  const tick = () => tono(1500 + rand() * 300, 0, .035, 'square', .05);
+  function fanfarria() {
+    const n = [523.25, 659.25, 783.99, 1046.5];
+    n.forEach((f, i) => { tono(f, i * .11, .25, 'sawtooth', .06); tono(f / 2, i * .11, .25, 'triangle', .08); });
+    [1046.5, 1318.5, 1568].forEach(f => tono(f, .5, 1.1, 'sawtooth', .045));
+    tono(523.25, .5, 1.1, 'triangle', .1);
+  }
+  function explosionSonido() {
+    if (!estado.sonido) return;
+    const a = audio(), len = a.sampleRate * .4, buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+    const s = a.createBufferSource(), g = a.createGain(), fl = a.createBiquadFilter();
+    fl.type = 'lowpass'; fl.frequency.value = 900; g.gain.value = .25;
+    s.buffer = buf; s.connect(fl).connect(g).connect(a.destination); s.start();
+  }
+  function setIconoSonido() {
+    $('#icoSonido').innerHTML = estado.sonido
+      ? '<path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>'
+      : '<path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m23 9-6 6M17 9l6 6"/>';
+  }
+  setIconoSonido();
+
+  // ---------- Ruleta ----------
+  const cv = $('#rueda'), ctx = cv.getContext('2d'), wrap = $('#ruedaWrap'), puntero = $('#puntero');
+  const iso = new Image(); iso.src = 'assets/inacap-isotipo.png'; iso.onload = () => dibujar();
+  const COLORES = [['#e1251b', '#fff'], ['#1b1e24', '#fff'], ['#b82b2b', '#fff'], ['#eceef0', '#1b1e24'], ['#2c313a', '#fff'], ['#8f1a14', '#fff']];
+  let rot = 0, girando = false, tam = 0, dpr = 1;
+
+  function medir() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    tam = cv.clientWidth;
+    cv.width = cv.height = Math.round(tam * dpr);
+    dibujar();
+  }
+  function colorDe(i, n) {
+    let c = i % COLORES.length;
+    if (n > 1 && i === n - 1 && c === 0) c = 2; // evita dos segmentos iguales contiguos al cerrar el círculo
+    return COLORES[c];
+  }
+  function recortar(texto, max) {
+    if (ctx.measureText(texto).width <= max) return texto;
+    while (texto.length > 1 && ctx.measureText(texto + '…').width > max) texto = texto.slice(0, -1);
+    return texto + '…';
+  }
+  function dibujar() {
+    const n = estado.nombres.length, W = cv.width, R = W / 2, r = R * .94;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, W);
+    ctx.translate(R, R);
+
+    // aro exterior
+    ctx.beginPath(); ctx.arc(0, 0, R * .995, 0, Math.PI * 2);
+    const ga = ctx.createLinearGradient(-R, -R, R, R); ga.addColorStop(0, '#3a3f48'); ga.addColorStop(.5, '#14171c'); ga.addColorStop(1, '#3a3f48');
+    ctx.fillStyle = ga; ctx.fill();
+
+    ctx.save(); ctx.rotate(rot);
+    if (!n) {
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fillStyle = '#1b1e24'; ctx.fill();
+      ctx.rotate(-rot); ctx.fillStyle = '#9aa1ab'; ctx.font = `600 ${R * .07}px Rajdhani, sans-serif`; ctx.textAlign = 'center';
+      ctx.fillText('Agrega participantes ➜', 0, R * .45);
+    } else {
+      const seg = Math.PI * 2 / n;
+      const fs = Math.max(9 * dpr, Math.min(R * .085, seg * r * .55, 40 * dpr));
+      const conTexto = seg * r * .62 >= 7 * dpr;
+      for (let i = 0; i < n; i++) {
+        const a0 = -Math.PI / 2 + i * seg, [bg, fg] = colorDe(i, n);
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, a0, a0 + seg); ctx.closePath();
+        ctx.fillStyle = bg; ctx.fill();
+        if (n <= 150) { ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = Math.max(1, dpr); ctx.stroke(); }
+        if (conTexto) {
+          ctx.save(); ctx.rotate(a0 + seg / 2);
+          ctx.fillStyle = fg; ctx.font = `700 ${fs}px Rajdhani, sans-serif`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+          ctx.fillText(recortar(estado.nombres[i], r * .64), r * .93, 0);
+          ctx.restore();
+        }
+      }
+      // brillo
+      const gb = ctx.createRadialGradient(0, 0, r * .2, 0, 0, r);
+      gb.addColorStop(0, 'rgba(255,255,255,0)'); gb.addColorStop(.85, 'rgba(255,255,255,0)'); gb.addColorStop(1, 'rgba(0,0,0,.28)');
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fillStyle = gb; ctx.fill();
+    }
+    ctx.restore();
+
+    // luces del aro
+    const L = 24;
+    for (let i = 0; i < L; i++) {
+      const a = i / L * Math.PI * 2 + (girando ? 0 : performance.now() / 4000), on = (i + Math.floor(performance.now() / (girando ? 90 : 450))) % 2;
+      ctx.beginPath(); ctx.arc(Math.cos(a) * R * .967, Math.sin(a) * R * .967, R * .013, 0, Math.PI * 2);
+      ctx.fillStyle = on ? '#ffd9d6' : '#e1251b'; ctx.shadowColor = '#ff3b2f'; ctx.shadowBlur = on ? 12 * dpr : 0; ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+
+    // centro
+    const hr = R * .17;
+    ctx.beginPath(); ctx.arc(0, 0, hr, 0, Math.PI * 2);
+    const gh = ctx.createRadialGradient(-hr * .3, -hr * .3, 0, 0, 0, hr); gh.addColorStop(0, '#2c313a'); gh.addColorStop(1, '#0d0f12');
+    ctx.fillStyle = gh; ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 20 * dpr; ctx.fill(); ctx.shadowBlur = 0;
+    ctx.lineWidth = 4 * dpr; ctx.strokeStyle = '#e1251b'; ctx.stroke();
+    if (iso.complete && iso.naturalWidth) { const s = hr * 1.05; ctx.drawImage(iso, -s / 2, -s / 2, s, s); }
+  }
+  const indiceEn = ang => {
+    const n = estado.nombres.length, seg = Math.PI * 2 / n;
+    return Math.floor((((-ang) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / seg) % n;
+  };
+
+  // animación ociosa de las luces
+  (function idle() { if (!girando) dibujar(); setTimeout(() => requestAnimationFrame(idle), 120); })();
+
+  function girar() {
+    if (girando) return;
+    const n = estado.nombres.length;
+    if (n < 1) return toast('Agrega participantes primero');
+    if (actx && actx.state === 'suspended') actx.resume();
+    audio();
+    girando = true; wrap.classList.add('girando'); $('#btnGirar').disabled = true; txt.disabled = true;
+
+    const ganador = randInt(n), seg = Math.PI * 2 / n;
+    const local = (ganador + .12 + rand() * .76) * seg;
+    const actual = ((rot % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    const delta = (((-local - actual) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    const inicio = rot, fin = rot + (7 + randInt(4)) * Math.PI * 2 + delta;
+    const dur = 7000 + rand() * 2000, t0 = performance.now();
+    let ultimo = indiceEn(rot);
+    const ease = t => 1 - Math.pow(1 - t, 4);
+
+    (function paso(now) {
+      const t = Math.min(1, (now - t0) / dur);
+      rot = inicio + (fin - inicio) * ease(t);
+      const idx = indiceEn(rot);
+      if (idx !== ultimo) { ultimo = idx; tick(); puntero.classList.remove('tic'); void puntero.offsetWidth; puntero.classList.add('tic'); }
+      dibujar();
+      if (t < 1) requestAnimationFrame(paso);
+      else setTimeout(() => celebrar(indiceEn(rot)), 350);
+    })(t0);
+  }
+
+  // ---------- Celebración ----------
+  let pendiente = null;
+  function celebrar(idx) {
+    const nombre = estado.nombres[idx], premio = $('#premio').value.trim();
+    pendiente = { idx, nombre, premio };
+    $('#numGanador').textContent = `GANADOR N° ${String(estado.ganadores.length + 1).padStart(2, '0')}`;
+    $('#premioGanador').textContent = premio ? '🎁 ' + premio : '';
+    $('#modal').classList.add('abierto');
+    terminal(`> acceso concedido · ganador@inacap:~$ verificado ✔`);
+    descifrar($('#nombreGanador'), nombre);
+    fanfarria(); setTimeout(explosionSonido, 450);
+    confetiLluvia(); fuegos(6);
+  }
+  function terminal(s) {
+    const el = $('#term'); el.textContent = ''; let i = 0;
+    const id = setInterval(() => { el.textContent = s.slice(0, ++i) + (i < s.length ? '█' : ''); if (i >= s.length) clearInterval(id); }, 22);
+  }
+  function descifrar(el, final) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@<>/\\{}[]01';
+    el.classList.remove('listo'); let f = 0; const total = 38;
+    const id = setInterval(() => {
+      f++;
+      const fijos = Math.floor(final.length * f / total);
+      el.textContent = final.split('').map((c, i) => i < fijos || c === ' ' ? c : chars[Math.floor(Math.random() * chars.length)]).join('');
+      if (f % 3 === 0) tono(300 + f * 25, 0, .03, 'square', .02);
+      if (f >= total) { clearInterval(id); el.textContent = final; el.classList.add('listo'); }
+    }, 40);
+  }
+  function cerrar(registrar) {
+    if (!pendiente) return;
+    const { idx, nombre, premio } = pendiente; pendiente = null;
+    $('#modal').classList.remove('abierto');
+    if (registrar) {
+      estado.ganadores.push({ nombre, premio, hora: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) });
+      if (estado.quitar) { estado.nombres.splice(idx, 1); txt.value = estado.nombres.join('\n'); }
+      $('#premio').value = '';
+      toast(`🏆 ${nombre} registrado como ganador`);
+    } else toast('Sorteo anulado · el participante sigue en la ruleta');
+    girando = false; wrap.classList.remove('girando'); $('#btnGirar').disabled = false; txt.disabled = false;
+    guardar(); render();
+  }
+
+  // ---------- Efectos (confeti y fuegos artificiales) ----------
+  const fx = $('#fx'), fctx = fx.getContext('2d');
+  let parts = [], animando = false;
+  const PAL = ['#e1251b', '#ffffff', '#b82b2b', '#ff6b5e', '#c9ccd1', '#ffd166', '#3ddc84'];
+  function ajustarFx() { fx.width = innerWidth * dpr; fx.height = innerHeight * dpr; }
+  function confetiLluvia() {
+    for (let i = 0; i < 260; i++) parts.push({
+      t: 'c', x: rand() * fx.width, y: -rand() * fx.height * .6, vx: (rand() - .5) * 4 * dpr, vy: (2 + rand() * 4) * dpr,
+      w: (6 + rand() * 8) * dpr, h: (8 + rand() * 10) * dpr, r: rand() * 6, vr: (rand() - .5) * .3, c: PAL[randInt(PAL.length)], vida: 1
+    });
+    // cañones laterales
+    [0, 1].forEach(lado => { for (let i = 0; i < 120; i++) {
+      const a = lado ? -Math.PI + .9 + rand() * .5 : -.9 - rand() * .5, v = (14 + rand() * 14) * dpr;
+      parts.push({ t: 'c', x: lado ? fx.width : 0, y: fx.height, vx: Math.cos(a) * v, vy: Math.sin(a) * v,
+        w: (6 + rand() * 8) * dpr, h: (8 + rand() * 10) * dpr, r: rand() * 6, vr: (rand() - .5) * .4, c: PAL[randInt(PAL.length)], vida: 1 });
+    } });
+    animar();
+  }
+  function fuegos(k) {
+    for (let j = 0; j < k; j++) setTimeout(() => {
+      const x = (.15 + rand() * .7) * fx.width, y = (.12 + rand() * .4) * fx.height, c = PAL[randInt(4)];
+      for (let i = 0; i < 90; i++) { const a = rand() * Math.PI * 2, v = (2 + rand() * 6) * dpr;
+        parts.push({ t: 'f', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, c: rand() < .3 ? '#fff' : c, vida: 1, s: (1.5 + rand() * 2) * dpr }); }
+      if (j) explosionSonido();
+      animar();
+    }, j * 450 + 200);
+  }
+  function animar() {
+    if (animando) return; animando = true;
+    (function f() {
+      fctx.clearRect(0, 0, fx.width, fx.height);
+      parts = parts.filter(p => p.vida > 0 && p.y < fx.height + 40);
+      for (const p of parts) {
+        if (p.t === 'c') {
+          p.vy += .18 * dpr; p.vx *= .985; p.vy = Math.min(p.vy, 6 * dpr); p.x += p.vx + Math.sin(p.r) * .6; p.y += p.vy; p.r += p.vr;
+          fctx.save(); fctx.translate(p.x, p.y); fctx.rotate(p.r); fctx.scale(1, Math.cos(p.r * 1.3));
+          fctx.fillStyle = p.c; fctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); fctx.restore();
+        } else {
+          p.vx *= .965; p.vy = p.vy * .965 + .06 * dpr; p.x += p.vx; p.y += p.vy; p.vida -= .012;
+          fctx.globalAlpha = Math.max(0, p.vida); fctx.fillStyle = p.c; fctx.shadowColor = p.c; fctx.shadowBlur = 10 * dpr;
+          fctx.beginPath(); fctx.arc(p.x, p.y, p.s, 0, Math.PI * 2); fctx.fill(); fctx.globalAlpha = 1; fctx.shadowBlur = 0;
+        }
+      }
+      if (parts.length) requestAnimationFrame(f); else { animando = false; fctx.clearRect(0, 0, fx.width, fx.height); }
+    })();
+  }
+
+  // ---------- Fondo binario ----------
+  const bg = $('#bg'), bctx = bg.getContext('2d'); let cols = [];
+  function ajustarBg() { bg.width = innerWidth; bg.height = innerHeight; cols = Array.from({ length: Math.ceil(innerWidth / 18) }, () => rand() * innerHeight / 18); }
+  setInterval(() => {
+    bctx.fillStyle = 'rgba(13,15,18,.12)'; bctx.fillRect(0, 0, bg.width, bg.height);
+    bctx.font = '14px JetBrains Mono, monospace';
+    cols.forEach((y, i) => {
+      bctx.fillStyle = rand() < .08 ? '#ffffff' : '#e1251b';
+      bctx.fillText(rand() < .5 ? '0' : '1', i * 18, y * 18);
+      cols[i] = y * 18 > bg.height && rand() > .975 ? 0 : y + 1;
+    });
+  }, 60);
+
+  // ---------- UI ----------
+  function render() {
+    const n = estado.nombres.length;
+    $('#cntPart').textContent = n; $('#cntGan').textContent = estado.ganadores.length;
+    const unicos = new Set(estado.nombres.map(s => s.toLowerCase())).size;
+    $('#infoPart').textContent = `${n} en la ruleta` + (unicos < n ? ` · ⚠ ${n - unicos} repetido(s)` : '') + ` · probabilidad ${n ? (100 / n).toFixed(2) : 0}% c/u`;
+    $('#btnGirar').disabled = girando || !n;
+    const ul = $('#listaGanadores');
+    ul.innerHTML = estado.ganadores.length ? '' : '<div class="vacio"><div>🎯</div>Aún no hay ganadores.<br>¡Gira la ruleta!</div>';
+    estado.ganadores.forEach((g, i) => {
+      const li = document.createElement('li');
+      li.innerHTML = `<div class="n">#${i + 1}</div><div><div class="nom"></div><div class="meta"></div></div><button class="x" title="Eliminar registro">✕</button>`;
+      li.querySelector('.nom').textContent = g.nombre;
+      li.querySelector('.meta').textContent = (g.premio ? '🎁 ' + g.premio + ' · ' : '') + g.hora;
+      li.querySelector('.x').onclick = () => {
+        if (!confirm(`¿Eliminar a "${g.nombre}" de los ganadores?\n(Volverá a la ruleta)`)) return;
+        estado.ganadores.splice(i, 1); estado.nombres.push(g.nombre); txt.value = estado.nombres.join('\n'); guardar(); render();
+      };
+      ul.prepend(li);
+    });
+    dibujar();
+  }
+  const parsear = s => s.split(/\r?\n/).map(l => l.split(/[;\t]/)[0].replace(/^"|"$/g, '').trim()).filter(Boolean);
+  let deb;
+  txt.addEventListener('input', () => { clearTimeout(deb); deb = setTimeout(() => { estado.nombres = parsear(txt.value); guardar(); render(); }, 200); });
+
+  function cargar(lista, origen) {
+    if (!lista.length) return toast('No se encontraron nombres en ' + origen);
+    estado.nombres = lista; txt.value = lista.join('\n'); guardar(); render();
+    toast(`✔ ${lista.length} participantes cargados desde ${origen}`);
+  }
+  async function leerArchivo(f) {
+    if (/\.xlsx?$/i.test(f.name)) {
+      if (!window.XLSX) return toast('No se pudo cargar el lector Excel (sin internet). Usa .csv o .txt');
+      const wb = XLSX.read(await f.arrayBuffer());
+      const filas = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+      return cargar(filas.map(r => String(r.find(c => String(c ?? '').trim()) ?? '').trim()).filter(Boolean), f.name);
+    }
+    let t = await f.text();
+    if (/\.csv$/i.test(f.name) && !/[;\t]/.test(t)) t = t.split(/\r?\n/).map(l => l.split(',')[0]).join('\n');
+    cargar(parsear(t), f.name);
+  }
+  const drop = $('#drop'), inp = $('#archivo');
+  drop.onclick = () => inp.click();
+  inp.onchange = () => { if (inp.files[0]) leerArchivo(inp.files[0]); inp.value = ''; };
+  ['dragenter', 'dragover'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add('sobre'); }));
+  ['dragleave', 'drop'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove('sobre'); }));
+  drop.addEventListener('drop', ev => { const f = ev.dataTransfer.files[0]; if (f) leerArchivo(f); });
+
+  $('#btnMezclar').onclick = () => {
+    const a = estado.nombres; for (let i = a.length - 1; i > 0; i--) { const j = randInt(i + 1); [a[i], a[j]] = [a[j], a[i]]; }
+    txt.value = a.join('\n'); guardar(); render();
+  };
+  $('#btnDuplicados').onclick = () => {
+    const vistos = new Set(), antes = estado.nombres.length;
+    estado.nombres = estado.nombres.filter(s => { const k = s.toLowerCase(); return vistos.has(k) ? false : vistos.add(k); });
+    txt.value = estado.nombres.join('\n'); guardar(); render(); toast(`${antes - estado.nombres.length} duplicado(s) eliminado(s)`);
+  };
+  $('#btnLimpiar').onclick = () => { if (confirm('¿Vaciar la lista de participantes?')) { estado.nombres = []; txt.value = ''; guardar(); render(); } };
+  $('#btnReiniciar').onclick = () => {
+    if (!estado.ganadores.length || !confirm('¿Reiniciar? Los ganadores se borrarán y volverán a la ruleta.')) return;
+    estado.nombres.push(...estado.ganadores.map(g => g.nombre)); estado.ganadores = []; txt.value = estado.nombres.join('\n'); guardar(); render();
+  };
+  $('#quitarGanador').onchange = e => { estado.quitar = e.target.checked; guardar(); };
+
+  const csv = () => 'N°;Nombre;Premio;Hora\n' + estado.ganadores.map((g, i) => [i + 1, g.nombre, g.premio || '', g.hora].map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\n');
+  $('#btnExportar').onclick = () => {
+    if (!estado.ganadores.length) return toast('Aún no hay ganadores');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['﻿' + csv()], { type: 'text/csv;charset=utf-8' }));
+    a.download = `ganadores-sorteo-inacap-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+  };
+  $('#btnCopiar').onclick = async () => {
+    if (!estado.ganadores.length) return toast('Aún no hay ganadores');
+    const t = estado.ganadores.map((g, i) => `${i + 1}. ${g.nombre}${g.premio ? ' — ' + g.premio : ''}`).join('\n');
+    try { await navigator.clipboard.writeText(t); toast('📋 Lista copiada'); } catch (e) { toast('No se pudo copiar'); }
+  };
+
+  document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('activo', x === b));
+    document.querySelectorAll('.vista').forEach(v => v.classList.toggle('activa', v.id === 'vista-' + b.dataset.tab));
+  });
+
+  titulo.addEventListener('input', () => { estado.titulo = titulo.innerHTML; guardar(); });
+  titulo.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); titulo.blur(); } });
+
+  $('#btnGirar').onclick = girar;
+  cv.onclick = girar;
+  $('#btnSeguir').onclick = () => cerrar(true);
+  $('#btnAnular').onclick = () => cerrar(false);
+  $('#btnSonido').onclick = () => { estado.sonido = !estado.sonido; setIconoSonido(); guardar(); };
+  const pantalla = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.();
+  $('#btnPantalla').onclick = pantalla;
+
+  document.addEventListener('keydown', e => {
+    const escribiendo = /INPUT|TEXTAREA/.test(e.target.tagName) || e.target.isContentEditable;
+    if ($('#modal').classList.contains('abierto')) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cerrar(true); }
+      if (e.key === 'Escape') cerrar(false);
+      return;
+    }
+    if (escribiendo) return;
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); girar(); }
+    else if (e.key.toLowerCase() === 'f') pantalla();
+    else if (e.key.toLowerCase() === 'm') $('#btnSonido').click();
+  });
+
+  let toastT;
+  function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('ver'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('ver'), 2600); }
+
+  addEventListener('resize', () => { medir(); ajustarFx(); ajustarBg(); });
+  medir(); ajustarFx(); ajustarBg(); render();
+  document.fonts?.ready.then(dibujar);
+})();
+</script>
+</body>
+</html>
