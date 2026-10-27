@@ -88,6 +88,50 @@
   .visor.final #visorNombre{color:#fff;text-shadow:0 0 18px rgba(225,37,27,.95)}
   @keyframes visorFin{50%{box-shadow:inset 0 0 22px rgba(0,0,0,.9),0 0 50px rgba(225,37,27,.8)}}
   .visor.inactivo #visorNombre{color:var(--gris);font-size:1.1rem;font-weight:600}
+
+  /* ===== Modo rodillo (para listas grandes) ===== */
+  .escenario[data-modo=rodillo] .visor,.escenario[data-modo=rodillo] .rueda-wrap,
+  .escenario[data-modo=ruleta] .rodillo-wrap{display:none}
+  .escenario[data-modo=rodillo] .ayuda .solo-ruleta{display:none}
+  .rodillo-wrap{width:min(880px,100%);display:flex;flex-direction:column;gap:10px}
+  .rod-head{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:.78rem;color:var(--gris);letter-spacing:.12em;padding:0 4px}
+  .rod-head b{color:var(--texto)}
+  .rod-head .vivo{color:var(--rojo)}
+  .rod-head .vivo::before{content:"●";margin-right:6px;animation:parpadeo 1.2s steps(2) infinite}
+  @keyframes parpadeo{50%{opacity:0}}
+  .rodillo{position:relative;height:max(300px,calc(100vh - 360px));max-height:720px;border-radius:18px;overflow:hidden;cursor:pointer;
+    background:
+      linear-gradient(90deg,rgba(225,37,27,.08),transparent 18%,transparent 82%,rgba(225,37,27,.08)),
+      linear-gradient(180deg,#07080a,#171a20 50%,#07080a);
+    border:1px solid var(--borde);
+    box-shadow:inset 0 0 60px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.03),0 20px 60px rgba(0,0,0,.5),0 0 60px rgba(225,37,27,.18)}
+  .rodillo::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:4;
+    background:linear-gradient(180deg,#07080a 0%,rgba(7,8,10,.0) 30%,rgba(7,8,10,0) 70%,#07080a 100%),
+      repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px)}
+  .rod-filas{position:absolute;inset:0}
+  .rod-fila{position:absolute;left:0;right:0;top:50%;display:flex;align-items:center;justify-content:center;gap:.6em;
+    padding:0 90px;will-change:transform,opacity;font-weight:700;letter-spacing:.02em;white-space:nowrap;color:#c9ccd1}
+  .rod-fila .num{font-family:var(--mono);font-weight:400;font-size:.42em;color:var(--rojo);letter-spacing:.08em;flex:none}
+  .rod-fila .nm{overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .rod-fila.centro{color:#fff}
+  .rodillo.rapido .rod-fila:not(.centro){filter:blur(1.5px)}
+  .rod-marco{position:absolute;left:14px;right:14px;top:50%;transform:translateY(-50%);z-index:3;border-radius:12px;pointer-events:none;
+    border:2px solid var(--rojo);background:linear-gradient(90deg,rgba(225,37,27,.22),rgba(225,37,27,.08) 30%,rgba(225,37,27,.08) 70%,rgba(225,37,27,.22));
+    box-shadow:0 0 30px rgba(225,37,27,.45),inset 0 0 24px rgba(225,37,27,.2)}
+  .rod-marco::before,.rod-marco::after{content:"";position:absolute;top:50%;transform:translateY(-50%);border:14px solid transparent}
+  .rod-marco::before{left:10px;border-left:20px solid var(--rojo);border-right-width:0}
+  .rod-marco::after{right:10px;border-right:20px solid var(--rojo);border-left-width:0}
+  .rodillo.girando .rod-marco{box-shadow:0 0 50px rgba(225,37,27,.7),inset 0 0 30px rgba(225,37,27,.3)}
+  .rodillo.final .rod-marco{animation:marcoFin .45s ease-in-out 3;background:rgba(225,37,27,.35)}
+  .rodillo.final .rod-fila.centro{text-shadow:0 0 20px rgba(255,255,255,.7)}
+  @keyframes marcoFin{50%{box-shadow:0 0 90px rgba(225,37,27,1),inset 0 0 40px rgba(255,255,255,.25);border-color:#fff}}
+  .rod-vacio{position:absolute;inset:0;display:grid;place-items:center;color:var(--gris);font-size:1.3rem;z-index:2}
+
+  .modo{display:flex;align-items:center;gap:10px;font-size:.98rem}
+  .modo .seg{display:flex;border:1px solid var(--borde);border-radius:8px;overflow:hidden;flex:1}
+  .modo .seg button{flex:1;background:var(--panel-2);border:0;padding:8px 6px;cursor:pointer;font-weight:600;font-size:.92rem;color:var(--gris)}
+  .modo .seg button+button{border-left:1px solid var(--borde)}
+  .modo .seg button.activo{background:var(--rojo);color:#fff}
   .rueda-wrap::before{content:"";position:absolute;inset:-14px;border-radius:50%;
     background:conic-gradient(from 0deg,var(--rojo),transparent 25%,var(--rojo) 50%,transparent 75%,var(--rojo));
     opacity:.35;filter:blur(18px);animation:girar 12s linear infinite}
@@ -204,6 +248,8 @@
     .ayuda{display:none}
     .visor::before{display:none}
     #visorNombre{inset:0 12px}
+    .rod-fila{padding:0 40px}
+    .rod-marco::before{left:6px;border-left-width:14px}.rod-marco::after{right:6px;border-right-width:14px}
   }
 </style>
 </head>
@@ -232,7 +278,7 @@
 </header>
 
 <main>
-  <section class="escenario">
+  <section class="escenario" id="escenario" data-modo="ruleta">
     <div class="titulo-evento">
       <div class="tag">&gt; sudo ./sorteo --run <b>█</b></div>
       <h1 id="tituloEvento" contenteditable="true" spellcheck="false" title="Haz clic para editar el nombre del evento">Gran <span>Sorteo</span></h1>
@@ -249,6 +295,14 @@
       <canvas id="rueda"></canvas>
     </div>
 
+    <div class="rodillo-wrap">
+      <div class="rod-head"><span>&gt; <b id="rodCuenta">0</b> participantes en juego</span><span class="vivo">EN VIVO</span></div>
+      <div class="rodillo" id="rodillo">
+        <div class="rod-filas" id="rodFilas"></div>
+        <div class="rod-marco" id="rodMarco"></div>
+      </div>
+    </div>
+
     <div class="controles">
       <div class="premio">
         <label for="premio">PREMIO</label>
@@ -256,7 +310,7 @@
       </div>
       <button class="btn-girar" id="btnGirar">¡Girar!</button>
     </div>
-    <div class="ayuda"><kbd>Espacio</kbd> girar · <kbd>F</kbd> pantalla completa · <kbd>M</kbd> sonido · clic en la ruleta también gira</div>
+    <div class="ayuda"><kbd>Espacio</kbd> girar · <kbd>F</kbd> pantalla completa · <kbd>M</kbd> sonido · <span class="solo-ruleta">clic en la ruleta también gira</span></div>
   </section>
 
   <aside>
@@ -273,7 +327,14 @@
       </div>
       <textarea id="nombres" spellcheck="false" placeholder="O pega los nombres aquí, uno por línea…"></textarea>
       <div class="info" id="infoPart"></div>
-      <label class="opcion"><input type="checkbox" id="quitarGanador" checked> Quitar al ganador de la ruleta</label>
+      <div class="modo">Vista
+        <div class="seg" id="segModo">
+          <button data-modo="auto" title="Ruleta hasta 40 participantes, rodillo con más">Auto</button>
+          <button data-modo="ruleta">Ruleta</button>
+          <button data-modo="rodillo">Rodillo</button>
+        </div>
+      </div>
+      <label class="opcion"><input type="checkbox" id="quitarGanador" checked> Quitar al ganador del sorteo</label>
       <div class="fila">
         <button class="btn" id="btnMezclar" title="Mezclar orden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Mezclar</button>
         <button class="btn" id="btnDuplicados" title="Eliminar nombres repetidos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>Sin duplicados</button>
@@ -320,7 +381,7 @@
   const LS = 'inacap-ruleta-v1';
 
   // ---------- Estado ----------
-  let estado = { nombres: [], ganadores: [], titulo: null, quitar: true, sonido: true };
+  let estado = { nombres: [], ganadores: [], titulo: null, quitar: true, sonido: true, modo: 'auto' };
   try { Object.assign(estado, JSON.parse(localStorage.getItem(LS)) || {}); } catch (e) {}
   const guardar = () => { try { localStorage.setItem(LS, JSON.stringify(estado)); } catch (e) {} };
 
@@ -475,12 +536,81 @@
     ultimoPaso = ahora;
   }
   function visorReposo() {
-    visor.classList.remove('girando', 'final');
+    visor.classList.remove('girando', 'final'); rod.classList.remove('girando', 'final', 'rapido');
     const n = estado.nombres.length;
     visor.classList.toggle('inactivo', !n);
     if (n) visorMostrar(estado.nombres[indiceEn(rot)], false);
     else visorMostrar('— agrega participantes —', false);
   }
+
+  let pendiente = null;
+
+  // ---------- Rodillo ----------
+  const escenario = $('#escenario'), rod = $('#rodillo'), rodFilas = $('#rodFilas'), rodMarco = $('#rodMarco');
+  const VISIBLES = 7, FILAS = VISIBLES + 2;
+  let rpos = 0, rowH = 60;
+  const filas = Array.from({ length: FILAS }, () => {
+    const el = document.createElement('div'); el.className = 'rod-fila';
+    el.innerHTML = '<span class="num"></span><span class="nm"></span>'; rodFilas.appendChild(el); return el;
+  });
+  const vacio = document.createElement('div'); vacio.className = 'rod-vacio'; vacio.textContent = 'Agrega participantes ➜'; rod.appendChild(vacio);
+  const modoActual = () => estado.modo === 'auto' ? (estado.nombres.length > 40 ? 'rodillo' : 'ruleta') : estado.modo;
+  const mod = (a, n) => ((a % n) + n) % n;
+  const indiceRodillo = () => mod(Math.round(rpos), estado.nombres.length);
+
+  function medirRodillo() {
+    rowH = rod.clientHeight / VISIBLES || 60;
+    rodMarco.style.height = rowH * 1.08 + 'px';
+    filas.forEach(el => { el.style.height = rowH + 'px'; el.style.marginTop = -rowH / 2 + 'px'; el.style.fontSize = Math.min(rowH * .46, rod.clientWidth / 20) + 'px'; });
+    pintarRodillo();
+  }
+  function pintarRodillo() {
+    const n = estado.nombres.length;
+    vacio.style.display = n ? 'none' : '';
+    const c = Math.round(rpos), frac = rpos - c, mitad = (FILAS - 1) / 2;
+    filas.forEach((el, j) => {
+      const k = j - mitad, d = k - frac, ad = Math.abs(d);
+      if (!n) { el.style.opacity = 0; return; }
+      const idx = mod(c + k, n);
+      if (el.lastChild.textContent !== estado.nombres[idx] || el.dataset.i !== String(idx)) {
+        el.dataset.i = idx;
+        el.firstChild.textContent = '#' + String(idx + 1).padStart(3, '0');
+        el.lastChild.textContent = estado.nombres[idx];
+      }
+      // efecto de tambor: las filas se achican y desvanecen al alejarse del centro
+      el.style.transform = `translateY(${d * rowH * (1 - ad * .035)}px) scale(${1 - Math.min(ad, 4) * .11}) perspective(600px) rotateX(${-d * 9}deg)`;
+      el.style.opacity = Math.max(0, 1 - ad * .2);
+      el.classList.toggle('centro', ad < .5);
+    });
+  }
+  function girarRodillo() {
+    const n = estado.nombres.length, ganador = randInt(n);
+    const base = Math.round(rpos), cur = mod(base, n);
+    // recorrido mínimo de ~90 filas para generar suspenso, terminando exactamente en el ganador
+    let D = mod(ganador - cur, n); while (D < 90) D += n;
+    const inicio = rpos, fin = base + D, dur = 8500 + rand() * 2000, t0 = performance.now();
+    const ease = t => 1 - Math.pow(1 - t, 4);
+    let ultimo = base;
+    rod.classList.add('girando'); rod.classList.remove('final');
+    (function paso(now) {
+      const t = Math.min(1, (now - t0) / dur);
+      rpos = inicio + (fin - inicio) * ease(t);
+      const vel = 4 * (fin - inicio) * Math.pow(1 - t, 3) / dur * 1000; // filas por segundo
+      rod.classList.toggle('rapido', vel > 18);
+      const r = Math.round(rpos);
+      if (r !== ultimo) { ultimo = r; tick(); }
+      pintarRodillo();
+      if (t < 1) requestAnimationFrame(paso);
+      else { rod.classList.remove('girando', 'rapido'); rod.classList.add('final'); setTimeout(() => celebrar(indiceRodillo()), 1100); }
+    })(t0);
+  }
+  // deriva lenta en reposo: el rodillo "respira" mientras espera
+  let tPrev = performance.now();
+  (function deriva(now) {
+    const dt = Math.min(100, now - tPrev); tPrev = now;
+    if (!girando && !pendiente && modoActual() === 'rodillo' && estado.nombres.length > 1) { rpos += dt * .0006; pintarRodillo(); }
+    requestAnimationFrame(deriva);
+  })(tPrev);
 
   // animación ociosa de las luces
   (function idle() { if (!girando) dibujar(); setTimeout(() => requestAnimationFrame(idle), 120); })();
@@ -491,7 +621,9 @@
     if (n < 1) return toast('Agrega participantes primero');
     if (actx && actx.state === 'suspended') actx.resume();
     audio();
-    girando = true; wrap.classList.add('girando'); visor.classList.remove('inactivo', 'final'); visor.classList.add('girando'); $('#btnGirar').disabled = true; txt.disabled = true;
+    girando = true; $('#btnGirar').disabled = true; txt.disabled = true;
+    if (modoActual() === 'rodillo') return girarRodillo();
+    wrap.classList.add('girando'); visor.classList.remove('inactivo', 'final'); visor.classList.add('girando');
 
     const ganador = randInt(n), seg = Math.PI * 2 / n;
     const local = (ganador + .12 + rand() * .76) * seg;
@@ -516,7 +648,6 @@
   }
 
   // ---------- Celebración ----------
-  let pendiente = null;
   function celebrar(idx) {
     const nombre = estado.nombres[idx], premio = $('#premio').value.trim();
     pendiente = { idx, nombre, premio };
@@ -637,7 +768,14 @@
       };
       ul.prepend(li);
     });
+    const modo = modoActual(), cambio = escenario.dataset.modo !== modo;
+    escenario.dataset.modo = modo;
+    document.querySelectorAll('#segModo button').forEach(b => b.classList.toggle('activo', b.dataset.modo === estado.modo));
+    $('#rodCuenta').textContent = n;
     if (!girando) visorReposo();
+    if (cambio) { medir(); medirRodillo(); }
+    rpos = n ? mod(rpos, n) : 0;
+    pintarRodillo();
     dibujar();
   }
   const parsear = s => s.split(/\r?\n/).map(l => l.split(/[;\t]/)[0].replace(/^"|"$/g, '').trim()).filter(Boolean);
@@ -706,6 +844,8 @@
 
   $('#btnGirar').onclick = girar;
   cv.onclick = girar;
+  rod.onclick = girar;
+  document.querySelectorAll('#segModo button').forEach(b => b.onclick = () => { estado.modo = b.dataset.modo; guardar(); render(); });
   $('#btnSeguir').onclick = () => cerrar(true);
   $('#btnAnular').onclick = () => cerrar(false);
   $('#btnSonido').onclick = () => { estado.sonido = !estado.sonido; setIconoSonido(); guardar(); };
@@ -728,8 +868,8 @@
   let toastT;
   function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('ver'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('ver'), 2600); }
 
-  addEventListener('resize', () => { medir(); ajustarFx(); ajustarBg(); });
-  medir(); ajustarFx(); ajustarBg(); render();
+  addEventListener('resize', () => { medir(); medirRodillo(); ajustarFx(); ajustarBg(); });
+  medir(); ajustarFx(); ajustarBg(); render(); medirRodillo();
   document.fonts?.ready.then(dibujar);
 })();
 </script>
