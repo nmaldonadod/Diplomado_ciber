@@ -11,6 +11,7 @@ const PESTANAS = [
 ];
 
 const ETIQUETA_TIPO = { estudiante: 'Estudiante', docente: 'Docente', administrativo: 'Administrativo' };
+const AREA_ACADEMICA = 'Área Informática, Ciberseguridad y Telecomunicaciones';
 const nombreDe = (e) => `${e.nombres} ${e.apellidos}`;
 const rango = (i) => `${nombreDia(fechaDe(i.inicio), { weekday: 'short', day: 'numeric', month: 'short' })} · ${hora(i.inicio)}–${hora(i.fin)}`;
 
@@ -387,6 +388,49 @@ async function vistaAgenda() {
 // Estudiantes
 // =====================================================================
 
+// Mismo diseño que la constancia que descarga el propio estudiante (public/js/app.js),
+// pero generada por el administrador en su nombre: útil si alguien llega después del evento
+// a pedirla y ya no tiene sentido mandarlo a autogestionarla.
+function vistaConstanciaEstudiante(e, evento, volver) {
+  const unDia = evento.fechaInicio === evento.fechaFin;
+  const minuscula = (s) => s.charAt(0).toLowerCase() + s.slice(1);
+  const fechaEvento = unDia
+    ? minuscula(nombreDia(evento.fechaInicio))
+    : `del ${minuscula(nombreDia(evento.fechaInicio, { day: 'numeric', month: 'long' }))} al ${minuscula(nombreDia(evento.fechaFin, { day: 'numeric', month: 'long', year: 'numeric' }))}`;
+  const hoy = new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' });
+  const mios = [...e.talleres].sort((a, b) => a.inicio.localeCompare(b.inicio));
+  return el('div', { style: { maxWidth: '640px', margin: '0 auto' } },
+    el('div', { class: 'acciones no-imprimir', style: { justifyContent: 'space-between', margin: '0 0 14px' } },
+      el('button', { class: 'btn btn-contorno btn-chico', type: 'button', onclick: volver }, '← Volver a estudiantes'),
+      el('button', { class: 'btn btn-primario btn-chico', type: 'button', onclick: () => window.print() }, 'Imprimir / Guardar como PDF')),
+    el('article', { class: 'constancia' },
+      el('span', { class: 'esquina ei', 'aria-hidden': 'true' }),
+      el('span', { class: 'esquina ad', 'aria-hidden': 'true' }),
+      el('div', { class: 'enc' },
+        el('img', { src: '/img/logo-inacap-claro.png', alt: 'INACAP 60 años · Aprender haciendo a lo largo de la vida', width: 230, height: 55 }),
+        el('span', { class: 'eyebrow-mes' }, '// Mes de la Ciberseguridad'),
+        el('span', { class: 'area' }, AREA_ACADEMICA),
+        el('h1', null, 'Constancia de participación')),
+      el('p', { class: 'cuerpo' },
+        'Se deja constancia de que ', el('strong', null, nombreDe(e)),
+        e.rut ? `, RUT ${e.rut},` : ',',
+        ' participó en «', el('strong', null, evento.nombre), '»',
+        evento.lugar ? `, realizado en ${evento.lugar},` : ',',
+        ` ${unDia ? 'el ' : ''}${fechaEvento}.`),
+      mios.length ? el('div', { class: 'talleres-constancia' },
+        el('p', null, mios.length === 1 ? 'Taller en el que participó:' : 'Talleres en los que participó:'),
+        el('ul', null, mios.map((t) => el('li', null, t.titulo)))) : null,
+      el('p', { class: 'disclaimer' },
+        'Esta constancia no representa una certificación emitida por INACAP. Documento generado automáticamente por la plataforma del evento el ', hoy, '.')));
+}
+
+async function mostrarConstancia(id) {
+  const [e, evento] = await Promise.all([llamar('GET', `/api/admin/estudiantes/${id}`), api('GET', '/api/evento')]);
+  if (!e.acreditadoEn) return toast('Esta persona todavía no está acreditada.', 'error');
+  clearTimeout(adm.timer);
+  vista.replaceChildren(vistaConstanciaEstudiante(e, evento.evento, () => cambiarPestana('estudiantes')));
+}
+
 async function detalleEstudiante(id, alCambiar) {
   const [e, talleres] = await Promise.all([llamar('GET', `/api/admin/estudiantes/${id}`), llamar('GET', '/api/admin/talleres')]);
   let cerrar;
@@ -429,6 +473,10 @@ async function detalleEstudiante(id, alCambiar) {
       e.acreditadoEn
         ? el('button', { class: 'btn btn-contorno btn-chico', type: 'button', onclick: accion(async () => { await llamar('DELETE', `/api/acreditacion/${id}`); recargar(); }) }, 'Deshacer acreditación')
         : el('button', { class: 'btn btn-exito btn-chico', type: 'button', onclick: accion(async () => { await llamar('POST', '/api/acreditacion/acreditar', { id }); recargar(); }) }, 'Acreditar'),
+      e.acreditadoEn && el('button', {
+        class: 'btn btn-secundario btn-chico', type: 'button',
+        onclick: accion(async () => { cerrar(); await mostrarConstancia(id); }),
+      }, 'Descargar constancia'),
       el('button', {
         class: 'btn btn-contorno btn-chico', type: 'button', style: { color: 'var(--peligro)' },
         onclick: accion(async () => {
